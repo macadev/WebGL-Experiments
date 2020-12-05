@@ -3,11 +3,20 @@ import { loadTexture } from './texture.js';
 import { vertexShaderCode, fragmentShaderCode } from './glsl_shaders.js';
 import { createCubeVAO } from './cube.js';
 
+const DIRECTIONS = {
+  UP: 'U',
+  DOWN: 'D',
+  LEFT: 'L',
+  RIGHT: 'R',
+};
+
 let cameraPos = vec3.fromValues(0.0, 0.0, 3.0);
 let cameraFront = vec3.fromValues(0.0, 0.0, -1.0);
 let cameraUp = vec3.fromValues(0.0, 1.0, 3.0);
 
 let then = 0;
+
+let movementDirections = new Set();
 
 function main() {
   const canvas = document.querySelector('#glCanvas');
@@ -54,6 +63,8 @@ function main() {
     const deltaTime = now - then;
     then = now;
     timeElapsed += deltaTime;
+
+    moveCamera(deltaTime);
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque
     gl.clearDepth(1.0); // Clear everything
@@ -113,5 +124,73 @@ function main() {
   }
   requestAnimationFrame(render);
 }
+
+function moveCamera(deltaTime) {
+  let cameraSpeed = 2.5 * deltaTime;
+  if (movementDirections.has(DIRECTIONS.UP)) {
+    vec3.scaleAndAdd(cameraPos, cameraPos, cameraFront, cameraSpeed);
+  }
+  if (movementDirections.has(DIRECTIONS.DOWN)) {
+    vec3.scaleAndAdd(cameraPos, cameraPos, cameraFront, -cameraSpeed);
+  }
+  if (movementDirections.has(DIRECTIONS.LEFT)) {
+    let horizontalMovementVector = vec3.cross(
+      vec3.create(),
+      cameraFront,
+      cameraUp
+    );
+    vec3.normalize(horizontalMovementVector, horizontalMovementVector);
+    vec3.scaleAndAdd(
+      cameraPos,
+      cameraPos,
+      horizontalMovementVector,
+      -cameraSpeed
+    );
+  }
+  if (movementDirections.has(DIRECTIONS.RIGHT)) {
+    let horizontalMovementVector = vec3.cross(
+      vec3.create(),
+      cameraFront,
+      cameraUp
+    );
+    vec3.normalize(horizontalMovementVector, horizontalMovementVector);
+    vec3.scaleAndAdd(
+      cameraPos,
+      cameraPos,
+      horizontalMovementVector,
+      cameraSpeed
+    );
+  }
+}
+
+document.addEventListener('keydown', function (e) {
+  if (e.code === 'KeyW') {
+    movementDirections.add(DIRECTIONS.UP);
+  }
+  if (e.code === 'KeyS') {
+    movementDirections.add(DIRECTIONS.DOWN);
+  }
+  if (e.code === 'KeyA') {
+    movementDirections.add(DIRECTIONS.LEFT);
+  }
+  if (e.code === 'KeyD') {
+    movementDirections.add(DIRECTIONS.RIGHT);
+  }
+});
+
+document.addEventListener('keyup', function (e) {
+  if (e.code === 'KeyW') {
+    movementDirections.delete(DIRECTIONS.UP);
+  }
+  if (e.code === 'KeyS') {
+    movementDirections.delete(DIRECTIONS.DOWN);
+  }
+  if (e.code === 'KeyA') {
+    movementDirections.delete(DIRECTIONS.LEFT);
+  }
+  if (e.code === 'KeyD') {
+    movementDirections.delete(DIRECTIONS.RIGHT);
+  }
+});
 
 window.onload = main;
