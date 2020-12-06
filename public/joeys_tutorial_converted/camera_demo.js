@@ -14,6 +14,15 @@ let cameraPos = vec3.fromValues(0.0, 0.0, 3.0);
 let cameraFront = vec3.fromValues(0.0, 0.0, -1.0);
 let cameraUp = vec3.fromValues(0.0, 1.0, 3.0);
 
+let lastX = 400;
+let lastY = 300;
+
+let newX = 400;
+let newY = 300;
+
+let pitch = 0.0;
+let yaw = -90.0;
+
 let then = 0;
 
 let movementDirections = new Set();
@@ -27,6 +36,28 @@ function main() {
   if (gl === null) {
     throw 'Unable to initialize WebGL. Your browser or machine may not support it.';
   }
+
+  canvas.requestPointerLock =
+    canvas.requestPointerLock || canvas.mozRequestPointerLock;
+
+  document.exitPointerLock =
+    document.exitPointerLock || document.mozExitPointerLock;
+
+  canvas.onclick = function () {
+    canvas.requestPointerLock();
+  };
+
+  // Hook pointer lock state change events for different browsers
+  document.addEventListener(
+    'pointerlockchange',
+    () => lockChangeAlert(canvas),
+    false
+  );
+  document.addEventListener(
+    'mozpointerlockchange',
+    () => lockChangeAlert(canvas),
+    false
+  );
 
   const texture = loadTexture(gl, 'assets/container.jpg');
   const shaderProgram = initShaderProgram(
@@ -64,7 +95,8 @@ function main() {
     then = now;
     timeElapsed += deltaTime;
 
-    moveCamera(deltaTime);
+    moveCameraKeyboard(deltaTime);
+    moveCameraMouse();
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque
     gl.clearDepth(1.0); // Clear everything
@@ -125,7 +157,49 @@ function main() {
   requestAnimationFrame(render);
 }
 
-function moveCamera(deltaTime) {
+function lockChangeAlert(canvas) {
+  if (
+    document.pointerLockElement === canvas ||
+    document.mozPointerLockElement === canvas
+  ) {
+    console.log('The pointer lock status is now locked');
+    document.addEventListener('mousemove', updatePosition, false);
+  } else {
+    console.log('The pointer lock status is now unlocked');
+    document.removeEventListener('mousemove', updatePosition, false);
+  }
+}
+
+function updatePosition(e) {
+  newX += e.movementX;
+  newY += e.movementY;
+}
+
+function moveCameraMouse() {
+  let offsetX = newX - lastX;
+  let offsetY = lastY - newY;
+  lastX = newX;
+  lastY = newY;
+
+  let sensitivity = 0.1;
+  offsetX *= sensitivity;
+  offsetY *= sensitivity;
+
+  yaw += offsetX;
+  pitch += offsetY;
+
+  if (pitch > 89.0) pitch = 89.0;
+  if (pitch < -89.0) pitch = -89.0;
+
+  let x = Math.cos(glMatrix.toRadian(yaw)) * Math.cos(glMatrix.toRadian(pitch));
+  let y = Math.sin(glMatrix.toRadian(pitch));
+  let z = Math.sin(glMatrix.toRadian(yaw)) * Math.cos(glMatrix.toRadian(pitch));
+
+  vec3.set(cameraFront, x, y, z);
+  cameraFront = vec3.normalize(vec3.create(), cameraFront);
+}
+
+function moveCameraKeyboard(deltaTime) {
   let cameraSpeed = 2.5 * deltaTime;
   if (movementDirections.has(DIRECTIONS.UP)) {
     vec3.scaleAndAdd(cameraPos, cameraPos, cameraFront, cameraSpeed);
