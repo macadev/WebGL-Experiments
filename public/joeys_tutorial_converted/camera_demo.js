@@ -12,7 +12,7 @@ const DIRECTIONS = {
 
 let cameraPos = vec3.fromValues(0.0, 0.0, 3.0);
 let cameraFront = vec3.fromValues(0.0, 0.0, -1.0);
-let cameraUp = vec3.fromValues(0.0, 1.0, 3.0);
+let cameraUp = vec3.fromValues(0.0, 1.0, 0.0);
 
 let lastX = 400;
 let lastY = 300;
