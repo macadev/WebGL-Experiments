@@ -2,26 +2,11 @@ import { initShaderProgram } from './shader.js';
 import { loadTexture } from './texture.js';
 import { vertexShaderCode, fragmentShaderCode } from './glsl_shaders.js';
 import { createCubeVAO } from './cube.js';
+import { createCamera } from './camera.js';
+import DIRECTIONS from './direction.js';
 
-const DIRECTIONS = {
-  UP: 'U',
-  DOWN: 'D',
-  LEFT: 'L',
-  RIGHT: 'R',
-};
-
-let cameraPos = vec3.fromValues(0.0, 0.0, 3.0);
-let cameraFront = vec3.fromValues(0.0, 0.0, -1.0);
-let cameraUp = vec3.fromValues(0.0, 1.0, 0.0);
-
-let lastX = 400;
-let lastY = 300;
-
-let newX = 400;
-let newY = 300;
-
-let pitch = 0.0;
-let yaw = -90.0;
+let mouseX = 400;
+let mouseY = 300;
 
 let then = 0;
 
@@ -66,6 +51,7 @@ function main() {
     fragmentShaderCode
   );
   const cubeVAO = createCubeVAO(gl, shaderProgram);
+  const camera = createCamera();
 
   const cubePositions = [
     vec3.fromValues(0.0, 0.0, 0.0),
@@ -95,8 +81,8 @@ function main() {
     then = now;
     timeElapsed += deltaTime;
 
-    moveCameraKeyboard(deltaTime);
-    moveCameraMouse();
+    camera.rotateCamera(mouseX, mouseY);
+    camera.moveCamera(deltaTime, movementDirections);
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque
     gl.clearDepth(1.0); // Clear everything
@@ -107,13 +93,7 @@ function main() {
 
     gl.bindVertexArray(cubeVAO);
 
-    let viewMatrix = mat4.create();
-    mat4.lookAt(
-      viewMatrix,
-      cameraPos,
-      vec3.add(vec3.create(), cameraPos, cameraFront),
-      cameraUp
-    );
+    let viewMatrix = camera.getViewMatrix();
 
     const fieldOfView = (45 * Math.PI) / 180; // in radians
     const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
@@ -171,70 +151,8 @@ function lockChangeAlert(canvas) {
 }
 
 function updatePosition(e) {
-  newX += e.movementX;
-  newY += e.movementY;
-}
-
-function moveCameraMouse() {
-  let offsetX = newX - lastX;
-  let offsetY = lastY - newY;
-  lastX = newX;
-  lastY = newY;
-
-  let sensitivity = 0.1;
-  offsetX *= sensitivity;
-  offsetY *= sensitivity;
-
-  yaw += offsetX;
-  pitch += offsetY;
-
-  if (pitch > 89.0) pitch = 89.0;
-  if (pitch < -89.0) pitch = -89.0;
-
-  let x = Math.cos(glMatrix.toRadian(yaw)) * Math.cos(glMatrix.toRadian(pitch));
-  let y = Math.sin(glMatrix.toRadian(pitch));
-  let z = Math.sin(glMatrix.toRadian(yaw)) * Math.cos(glMatrix.toRadian(pitch));
-
-  vec3.set(cameraFront, x, y, z);
-  cameraFront = vec3.normalize(vec3.create(), cameraFront);
-}
-
-function moveCameraKeyboard(deltaTime) {
-  let cameraSpeed = 2.5 * deltaTime;
-  if (movementDirections.has(DIRECTIONS.UP)) {
-    vec3.scaleAndAdd(cameraPos, cameraPos, cameraFront, cameraSpeed);
-  }
-  if (movementDirections.has(DIRECTIONS.DOWN)) {
-    vec3.scaleAndAdd(cameraPos, cameraPos, cameraFront, -cameraSpeed);
-  }
-  if (movementDirections.has(DIRECTIONS.LEFT)) {
-    let horizontalMovementVector = vec3.cross(
-      vec3.create(),
-      cameraFront,
-      cameraUp
-    );
-    vec3.normalize(horizontalMovementVector, horizontalMovementVector);
-    vec3.scaleAndAdd(
-      cameraPos,
-      cameraPos,
-      horizontalMovementVector,
-      -cameraSpeed
-    );
-  }
-  if (movementDirections.has(DIRECTIONS.RIGHT)) {
-    let horizontalMovementVector = vec3.cross(
-      vec3.create(),
-      cameraFront,
-      cameraUp
-    );
-    vec3.normalize(horizontalMovementVector, horizontalMovementVector);
-    vec3.scaleAndAdd(
-      cameraPos,
-      cameraPos,
-      horizontalMovementVector,
-      cameraSpeed
-    );
-  }
+  mouseX += e.movementX;
+  mouseY += e.movementY;
 }
 
 document.addEventListener('keydown', function (e) {
