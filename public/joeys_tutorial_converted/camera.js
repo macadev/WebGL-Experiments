@@ -22,6 +22,14 @@ function createCamera() {
     );
   }
 
+  function getComponentVectors() {
+    return {
+      cameraPos: vec3.clone(cameraPos),
+      cameraFront: vec3.clone(cameraFront),
+      cameraUp: vec3.clone(cameraUp),
+    };
+  }
+
   function rotateCamera(newMouseX, newMouseY) {
     let offsetX = newMouseX - mouseX;
     let offsetY = mouseY - newMouseY;
@@ -89,6 +97,7 @@ function createCamera() {
     getViewMatrix,
     rotateCamera,
     moveCamera,
+    getComponentVectors,
   };
 }
 

@@ -3,6 +3,7 @@ import { loadTexture } from './texture.js';
 import { vertexShaderCode, fragmentShaderCode } from './glsl_shaders.js';
 import { createCubeVAO } from './cube.js';
 import { createCamera } from './camera.js';
+import { createProjectile } from './projectile.js';
 import DIRECTIONS from './direction.js';
 
 let mouseX = 400;
@@ -11,6 +12,10 @@ let mouseY = 300;
 let then = 0;
 
 let movementDirections = new Set();
+
+const camera = createCamera();
+
+let projectiles = [];
 
 function main() {
   const canvas = document.querySelector('#glCanvas');
@@ -51,7 +56,6 @@ function main() {
     fragmentShaderCode
   );
   const cubeVAO = createCubeVAO(gl, shaderProgram);
-  const camera = createCamera();
 
   const cubePositions = [
     vec3.fromValues(0.0, 0.0, 0.0),
@@ -132,6 +136,32 @@ function main() {
       gl.drawArrays(gl.TRIANGLES, 0, 36);
     });
 
+    projectiles.forEach((projectile, index) => {
+      projectile.move(deltaTime);
+
+      let modelMatrix = mat4.create(); // Identity
+      modelMatrix = mat4.translate(
+        modelMatrix,
+        modelMatrix,
+        projectile.getPosition()
+      );
+
+      modelMatrix = mat4.rotate(
+        modelMatrix,
+        modelMatrix,
+        glMatrix.toRadian(50.0) * timeElapsed + index,
+        vec3.fromValues(1.0, 0.3, 0.5)
+      );
+
+      gl.uniformMatrix4fv(
+        gl.getUniformLocation(shaderProgram, 'model'),
+        false,
+        modelMatrix
+      );
+
+      gl.drawArrays(gl.TRIANGLES, 0, 36);
+    });
+
     requestAnimationFrame(render);
   }
   requestAnimationFrame(render);
@@ -183,6 +213,17 @@ document.addEventListener('keyup', function (e) {
   if (e.code === 'KeyD') {
     movementDirections.delete(DIRECTIONS.RIGHT);
   }
+});
+
+document.addEventListener('click', function (e) {
+  let cameraComponentVectors = camera.getComponentVectors();
+  projectiles.push(
+    createProjectile(
+      cameraComponentVectors.cameraPos,
+      cameraComponentVectors.cameraFront,
+      cameraComponentVectors.cameraUp
+    )
+  );
 });
 
 window.onload = main;
