@@ -1,9 +1,8 @@
 import { initShaderProgram } from '../engine/shader.js';
-import { loadTexture } from './texture.js';
 import { vertexShaderCode, fragmentShaderCode } from './glsl_shaders.js';
-import { createCubeVAO } from './cube.js';
 import { createCamera } from '../engine/camera.js';
-import { createProjectile } from './projectile.js';
+import { getSceneMeshData } from '../engine/gltf_loader.js';
+import { createMesh } from '../engine/mesh.js';
 import DIRECTIONS from '../engine/direction.js';
 
 let mouseX = 400;
@@ -15,7 +14,7 @@ let movementDirections = new Set();
 
 const camera = createCamera();
 
-let projectiles = [];
+let objectsToRender = [];
 
 function main() {
   const canvas = document.querySelector('#glCanvas');
@@ -49,34 +48,27 @@ function main() {
     false
   );
 
-  const texture = loadTexture(gl, 'assets/container.jpg');
   const shaderProgram = initShaderProgram(
     gl,
     vertexShaderCode,
     fragmentShaderCode
   );
-  const cubeVAO = createCubeVAO(gl, shaderProgram);
 
-  const cubePositions = [
-    vec3.fromValues(0.0, 0.0, 0.0),
-    vec3.fromValues(2.0, 5.0, -15.0),
-    vec3.fromValues(-1.5, -2.2, -2.5),
-    vec3.fromValues(-3.8, -2.0, -12.3),
-    vec3.fromValues(2.4, -0.4, -3.5),
-    vec3.fromValues(-1.7, 3.0, -7.5),
-    vec3.fromValues(1.3, -2.0, -2.5),
-    vec3.fromValues(1.5, 2.0, -2.5),
-    vec3.fromValues(1.5, 0.2, -1.5),
-    vec3.fromValues(-1.3, 1.0, -1.5),
-  ];
+  getSceneMeshData('skull/scene.gltf').then((dataOfMeshes) => {
+    dataOfMeshes.forEach((meshData) => {
+      objectsToRender.push(
+        createMesh(
+          gl,
+          shaderProgram,
+          meshData.positions,
+          meshData.normals,
+          meshData.indices
+        )
+      );
+    });
+  });
 
   gl.useProgram(shaderProgram);
-
-  gl.activeTexture(gl.TEXTURE0);
-  // Bind the texture to texture unit 0
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-  // Tell the shader we bound the texture to texture unit 0
-  gl.uniform1i(gl.getUniformLocation(shaderProgram, 'texture1'), 0);
 
   let timeElapsed = 0;
   function render(now) {
@@ -94,8 +86,6 @@ function main() {
     gl.depthFunc(gl.LEQUAL); // Near things obscure far things
     // Clear the canvas before we start drawing on it.
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-    gl.bindVertexArray(cubeVAO);
 
     let viewMatrix = camera.getViewMatrix();
 
@@ -118,49 +108,16 @@ function main() {
       viewMatrix
     );
 
-    cubePositions.forEach((cubePos, index) => {
-      let modelMatrix = mat4.create(); // Identity
-      modelMatrix = mat4.translate(modelMatrix, modelMatrix, cubePos);
-      modelMatrix = mat4.rotate(
-        modelMatrix,
-        modelMatrix,
-        glMatrix.toRadian(50.0) * timeElapsed + index,
-        vec3.fromValues(1.0, 0.3, 0.5)
-      );
-      gl.uniformMatrix4fv(
-        gl.getUniformLocation(shaderProgram, 'model'),
-        false,
-        modelMatrix
-      );
+    let modelMat = mat4.create();
+    mat4.rotateX(modelMat, modelMat, glMatrix.toRadian(-90.0));
 
-      gl.drawArrays(gl.TRIANGLES, 0, 36);
-    });
+    gl.uniformMatrix4fv(
+      gl.getUniformLocation(shaderProgram, 'model'),
+      false,
+      modelMat
+    );
 
-    projectiles.forEach((projectile, index) => {
-      projectile.move(deltaTime);
-
-      let modelMatrix = mat4.create(); // Identity
-      modelMatrix = mat4.translate(
-        modelMatrix,
-        modelMatrix,
-        projectile.getPosition()
-      );
-
-      modelMatrix = mat4.rotate(
-        modelMatrix,
-        modelMatrix,
-        glMatrix.toRadian(50.0) * timeElapsed + index,
-        vec3.fromValues(1.0, 0.3, 0.5)
-      );
-
-      gl.uniformMatrix4fv(
-        gl.getUniformLocation(shaderProgram, 'model'),
-        false,
-        modelMatrix
-      );
-
-      gl.drawArrays(gl.TRIANGLES, 0, 36);
-    });
+    objectsToRender.forEach((sceneObject) => sceneObject.render());
 
     requestAnimationFrame(render);
   }
@@ -213,17 +170,6 @@ document.addEventListener('keyup', function (e) {
   if (e.code === 'KeyD') {
     movementDirections.delete(DIRECTIONS.RIGHT);
   }
-});
-
-document.addEventListener('click', function (e) {
-  let cameraComponentVectors = camera.getComponentVectors();
-  projectiles.push(
-    createProjectile(
-      cameraComponentVectors.cameraPos,
-      cameraComponentVectors.cameraFront,
-      cameraComponentVectors.cameraUp
-    )
-  );
 });
 
 window.onload = main;
