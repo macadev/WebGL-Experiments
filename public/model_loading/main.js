@@ -1,7 +1,7 @@
 import { initShaderProgram } from '../engine/shader.js';
 import { vertexShaderCode, fragmentShaderCode } from './glsl_shaders.js';
 import { createCamera } from '../engine/camera.js';
-import { getSceneMeshData } from '../engine/gltf_loader.js';
+import { ModelLoader } from '../engine/gltf_loader.js';
 import { createMesh } from '../engine/mesh.js';
 import DIRECTIONS from '../engine/direction.js';
 
@@ -54,7 +54,8 @@ function main() {
     fragmentShaderCode
   );
 
-  getSceneMeshData('skull/scene.gltf').then((dataOfMeshes) => {
+  let modelLoader = new ModelLoader('skull/scene.gltf', 'skull');
+  modelLoader.getSceneMeshData().then((dataOfMeshes) => {
     dataOfMeshes.forEach((meshData) => {
       objectsToRender.push(
         createMesh(
