@@ -1,0 +1,26 @@
+<html>
+  <body>
+    <head>
+      <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"
+        integrity="sha512-zhHQR0/H5SEBL3Wn6yYSaTTZej12z0hVZKOv3TwCUXT1z5qeqGcXJLLrbERYRScEDDpYIJhPC1fk31gqR783iQ=="
+        crossorigin="anonymous"
+        defer
+      ></script>
+      <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.4/socket.io.js"
+        integrity="sha512-aMGMvNYu8Ue4G+fHa359jcPb1u+ytAF+P2SCb+PxrjCdO3n3ZTxJ30zuH39rimUggmTwmh2u7wvQsDTHESnmfQ=="
+        crossorigin="anonymous"
+      ></script>
+    </head>
+    <body>
+      <canvas id="glCanvas" width="800" height="600"></canvas>
+      <script type="module" src="../engine/gltf_loader.js"></script>
+      <script type="module" src="../engine/direction.js"></script>
+      <script type="module" src="../engine/camera.js"></script>
+      <script type="module" src="../engine/shader.js"></script>
+      <script type="module" src="glsl_shaders.js"></script>
+      <script type="module" src="main.js"></script>
+    </body>
+  </body>
+</html>
