@@ -19,8 +19,8 @@ let objectsToRender = [];
 function main() {
   const socket = io.connect();
 
-  socket.on('ack-join', function (message) {
-    console.log('Conectado al servidor', message);
+  socket.on('ack-join', function (players) {
+    console.log('Conectado al servidor', players);
   });
 
   socket.on('server-update', function (updatedGameState) {
@@ -86,6 +86,21 @@ function main() {
     const deltaTime = now - then;
     then = now;
     timeElapsed += deltaTime;
+
+    let cameraComponents = camera.getComponentVectors();
+    socket.emit('client-update', {
+      cameraFront: {
+        x: cameraComponents.cameraFront[0],
+        y: cameraComponents.cameraFront[1],
+        z: cameraComponents.cameraFront[2],
+      },
+      cameraUp: {
+        x: cameraComponents.cameraUp[0],
+        y: cameraComponents.cameraUp[1],
+        z: cameraComponents.cameraUp[2],
+      },
+      movementKeys: Array.from(movementDirections),
+    });
 
     camera.rotateCamera(mouseX, mouseY);
     camera.moveCamera(deltaTime, movementDirections);
