@@ -95,9 +95,14 @@ class ModelLoader {
         continue;
       }
 
-      let indices = [];
+      let indices = undefined;
       if (primitive.indices !== undefined) {
         indices = await this.#loadDataFromAccessor(model, primitive.indices);
+      }
+
+      let textureData;
+      if (primitive.material !== undefined) {
+        textureData = await this.#loadTextureData(model, primitive);
       }
 
       let positions = [];
@@ -122,7 +127,8 @@ class ModelLoader {
       return {
         positions,
         normals,
-        indices,
+        ...(indices !== undefined && { indices }),
+        ...(textureData !== undefined && { textureData }),
       };
     }
   }
@@ -182,6 +188,77 @@ class ModelLoader {
     }
 
     return data;
+  }
+
+  async #loadTextureData(model, primitive) {
+    let materialIndex = primitive.material;
+    let material = model.materials[materialIndex];
+
+    // For now only support loading the baseColorTexture
+    if (
+      material.pbrMetallicRoughness === undefined ||
+      material.pbrMetallicRoughness.baseColorTexture === undefined
+    ) {
+      return undefined;
+    }
+
+    // Find the index of the accessor that contains the texture coordinate data. Then load the data from the accessor.
+    let textureIndex = material.pbrMetallicRoughness.baseColorTexture.index;
+    let texCoordAttributeIndex =
+      material.pbrMetallicRoughness.baseColorTexture.texCoord;
+    let texCoordAttributeName = `TEXCOORD_${texCoordAttributeIndex}`;
+    let texCoordAccessorIndex = primitive.attributes[texCoordAttributeName];
+    let textureCoordinateData = await this.#loadDataFromAccessor(
+      model,
+      texCoordAccessorIndex
+    );
+
+    // Load the image that contains the texture and the sampler data
+    let texture = model.textures[textureIndex];
+    let image = model.images[texture.source];
+    let textureSamplerConfiguration = model.samplers[texture.sampler];
+
+    // We don't support loading images from buffers.
+    if (image.uri === undefined) return undefined;
+
+    let imageURI = image.uri;
+    let htmlImage = await this.#loadImage(
+      `${this.#binaryDataBasePath}/${imageURI}`
+    );
+
+    let fileExtension = imageURI.split('.')[1].toLowerCase();
+    let imageChannelCount;
+    switch (fileExtension) {
+      case 'png':
+        imageChannelCount = 4;
+        break;
+      case 'jpeg':
+        imageChannelCount = 3;
+        break;
+      default:
+        imageChannelCount = 4;
+        break;
+    }
+
+    return {
+      htmlImage,
+      imageChannelCount,
+      textureCoordinateData,
+      textureSamplerConfiguration,
+    };
+  }
+
+  async #loadImage(url) {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = function () {
+        resolve(image);
+      };
+      image.onerror = function () {
+        reject(`Failed to load image from URL ${url}`);
+      };
+      image.src = url;
+    });
   }
 
   async #loadBufferView(model, bufferViewIndex) {

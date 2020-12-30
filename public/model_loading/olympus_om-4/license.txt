@@ -1,0 +1,11 @@
+Model Information:
+* title:	Olympus OM-4
+* source:	https://sketchfab.com/3d-models/olympus-om-4-41280d6744c04c1d879c2b065b5e4b70
+* author:	Rik De Keersmaeker (https://sketchfab.com/rdkeersm)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Olympus OM-4" (https://sketchfab.com/3d-models/olympus-om-4-41280d6744c04c1d879c2b065b5e4b70) by Rik De Keersmaeker (https://sketchfab.com/rdkeersm) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

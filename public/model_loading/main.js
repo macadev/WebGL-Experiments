@@ -2,7 +2,7 @@ import { initShaderProgram } from '../engine/shader.js';
 import { vertexShaderCode, fragmentShaderCode } from './glsl_shaders.js';
 import { createCamera } from '../engine/camera.js';
 import { ModelLoader } from '../engine/gltf_loader.js';
-import { createMesh } from '../engine/mesh.js';
+import { Mesh } from '../engine/mesh.js';
 import DIRECTIONS from '../engine/direction.js';
 
 let mouseX = 400;
@@ -54,17 +54,16 @@ function main() {
     fragmentShaderCode
   );
 
+  // let modelLoader = new ModelLoader('olympus_om-4/scene.gltf', 'olympus_om-4');
   let modelLoader = new ModelLoader('skull/scene.gltf', 'skull');
   modelLoader.getSceneMeshData().then((dataOfMeshes) => {
     dataOfMeshes.forEach((meshData) => {
       objectsToRender.push(
-        createMesh(
+        new Mesh({
           gl,
           shaderProgram,
-          meshData.positions,
-          meshData.normals,
-          meshData.indices
-        )
+          ...meshData,
+        })
       );
     });
   });
@@ -111,6 +110,8 @@ function main() {
 
     let modelMat = mat4.create();
     mat4.rotateX(modelMat, modelMat, glMatrix.toRadian(-90.0));
+    // Camera model is huge. Need to scale it down.
+    // mat4.scale(modelMat, modelMat, vec3.fromValues(0.01, 0.01, 0.01));
 
     gl.uniformMatrix4fv(
       gl.getUniformLocation(shaderProgram, 'model'),
