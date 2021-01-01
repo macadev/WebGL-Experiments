@@ -12,21 +12,14 @@ let then = 0;
 
 let movementDirections = new Set();
 
-const camera = createCamera();
+let camera;
 
-let objectsToRender = [];
+let skullMeshes = [];
+
+let socket;
+let gameState;
 
 function main() {
-  const socket = io.connect();
-
-  socket.on('ack-join', function (players) {
-    console.log('Conectado al servidor', players);
-  });
-
-  socket.on('server-update', function (updatedGameState) {
-    console.log('Recibí update del servidor');
-  });
-
   const canvas = document.querySelector('#glCanvas');
   // Initialize the GL context
   const gl = canvas.getContext('webgl2');
@@ -58,6 +51,25 @@ function main() {
     false
   );
 
+  let initialPlayerState = gameState[socket.id];
+  camera = createCamera(
+    vec3.fromValues(
+      initialPlayerState.position.x,
+      initialPlayerState.position.y,
+      initialPlayerState.position.z
+    ),
+    vec3.fromValues(
+      initialPlayerState.cameraFront.x,
+      initialPlayerState.cameraFront.y,
+      initialPlayerState.cameraFront.z
+    ),
+    vec3.fromValues(
+      initialPlayerState.cameraUp.x,
+      initialPlayerState.cameraUp.y,
+      initialPlayerState.cameraUp.z
+    )
+  );
+
   const shaderProgram = initShaderProgram(
     gl,
     vertexShaderCode,
@@ -68,7 +80,7 @@ function main() {
   let modelLoader = new ModelLoader('skull/scene.gltf', 'skull');
   modelLoader.getSceneMeshData().then((dataOfMeshes) => {
     dataOfMeshes.forEach((meshData) => {
-      objectsToRender.push(
+      skullMeshes.push(
         new Mesh({
           gl,
           shaderProgram,
@@ -80,12 +92,13 @@ function main() {
 
   gl.useProgram(shaderProgram);
 
-  let timeElapsed = 0;
   function render(now) {
     now *= 0.001; // convert to seconds
     const deltaTime = now - then;
     then = now;
-    timeElapsed += deltaTime;
+
+    camera.rotateCamera(mouseX, mouseY);
+    camera.moveCamera(deltaTime, movementDirections);
 
     let cameraComponents = camera.getComponentVectors();
     socket.emit('client-update', {
@@ -99,11 +112,8 @@ function main() {
         y: cameraComponents.cameraUp[1],
         z: cameraComponents.cameraUp[2],
       },
-      movementKeys: Array.from(movementDirections),
+      movementDirections: Array.from(movementDirections),
     });
-
-    camera.rotateCamera(mouseX, mouseY);
-    camera.moveCamera(deltaTime, movementDirections);
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque
     gl.clearDepth(1.0); // Clear everything
@@ -117,7 +127,7 @@ function main() {
     const fieldOfView = (45 * Math.PI) / 180; // in radians
     const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
     const zNear = 0.1;
-    const zFar = 100.0;
+    const zFar = 10000.0;
     const projectionMatrix = mat4.create();
     mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
 
@@ -133,18 +143,79 @@ function main() {
       viewMatrix
     );
 
-    let modelMat = mat4.create();
-    mat4.rotateX(modelMat, modelMat, glMatrix.toRadian(-90.0));
-    // Camera model is huge. Need to scale it down.
-    // mat4.scale(modelMat, modelMat, vec3.fromValues(0.01, 0.01, 0.01));
+    if (skullMeshes.length > 0) {
+      for (const [socketId, playerData] of Object.entries(gameState)) {
+        if (socketId === socket.id) continue;
 
-    gl.uniformMatrix4fv(
-      gl.getUniformLocation(shaderProgram, 'model'),
-      false,
-      modelMat
-    );
+        let playerCameraUp = vec3.fromValues(
+          playerData.cameraUp.x,
+          playerData.cameraUp.y,
+          playerData.cameraUp.z
+        );
 
-    objectsToRender.forEach((sceneObject) => sceneObject.render());
+        let playerCameraFront = vec3.fromValues(
+          playerData.cameraFront.x,
+          playerData.cameraFront.y,
+          playerData.cameraFront.z
+        );
+
+        let playerCameraPosition = vec3.fromValues(
+          playerData.position.x,
+          playerData.position.y,
+          playerData.position.z
+        );
+
+        vec3.normalize(playerCameraUp, playerCameraUp);
+        vec3.normalize(playerCameraFront, playerCameraFront);
+
+        let worldForwardToLocalForward = quat.create();
+        quat.rotationTo(
+          worldForwardToLocalForward,
+          vec3.fromValues(0, 0, -1),
+          playerCameraFront
+        );
+
+        let rotatedWorldUp = vec3.transformQuat(
+          vec3.create(),
+          vec3.fromValues(0, 1, 0),
+          worldForwardToLocalForward
+        );
+
+        let fromRotatedWorldUpToLocalUp = quat.create();
+        quat.rotationTo(
+          fromRotatedWorldUpToLocalUp,
+          rotatedWorldUp,
+          playerCameraUp
+        );
+
+        let lookRotation = quat.multiply(
+          quat.create(),
+          fromRotatedWorldUpToLocalUp,
+          worldForwardToLocalForward
+        );
+
+        quat.normalize(lookRotation, lookRotation);
+
+        let modelMat = mat4.create();
+
+        let translationMat = mat4.create();
+        mat4.translate(translationMat, translationMat, playerCameraPosition);
+
+        mat4.fromQuat(modelMat, lookRotation);
+
+        mat4.rotateY(modelMat, modelMat, glMatrix.toRadian(180.0));
+        mat4.rotateX(modelMat, modelMat, glMatrix.toRadian(-90.0));
+        mat4.multiply(modelMat, translationMat, modelMat);
+
+        gl.uniformMatrix4fv(
+          gl.getUniformLocation(shaderProgram, 'model'),
+          false,
+          modelMat
+        );
+
+        skullMeshes.forEach((sceneObject) => sceneObject.render());
+      }
+    }
 
     requestAnimationFrame(render);
   }
@@ -199,4 +270,18 @@ document.addEventListener('keyup', function (e) {
   }
 });
 
-window.onload = main;
+function connectToServer() {
+  socket = io.connect();
+
+  socket.on('ack-join', function (serverGameState) {
+    console.log('Conectado al servidor', serverGameState);
+    gameState = serverGameState;
+    main();
+  });
+
+  socket.on('server-update', function (updatedGameState) {
+    gameState = updatedGameState;
+  });
+}
+
+window.onload = connectToServer;

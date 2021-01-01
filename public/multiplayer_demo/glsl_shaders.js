@@ -43,14 +43,15 @@ void main()
     // highp vec3 diff = (max(dot(lightDir, worldNormal), 0.0)) * texture2D(texture1, texCoord).rgb;
     // highp vec3 diff = ((max(dot(lightDir, worldNormal), 0.0)) * texture2D(texture1, texCoord).rgb) + lightColor ;
 
-    vec3 diff;
-    if (shouldSampleTexture == 1) {
-        diff = (max(dot(lightDir, worldNormal), 0.0)) * texture(texture1, texCoord).rgb;
-    } else {
-        diff = (max(dot(lightDir, worldNormal), 0.0) * lightColor);
-    }
+    // vec3 diff;
+    // if (shouldSampleTexture == 1) {
+    //     diff = (max(dot(lightDir, worldNormal), 0.0)) * texture(texture1, texCoord).rgb;
+    // } else {
+    //    diff = (max(dot(lightDir, worldNormal), 0.0) * lightColor);
+    // }
 
-    outputColor = vec4(diff, 1.0);
+    outputColor = vec4(texture(texture1, texCoord).rgb + vec3(0.3, 0.0, 0.0), 1.0);
+    // outputColor = vec4(diff, 1.0);
 }`;
 
 export { vertexShaderCode, fragmentShaderCode };

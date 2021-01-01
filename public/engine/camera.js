@@ -1,10 +1,10 @@
 import DIRECTIONS from './direction.js';
 
-function createCamera() {
-  let cameraPos = vec3.fromValues(0.0, 0.0, 3.0);
-  let cameraFront = vec3.fromValues(0.0, 0.0, -1.0);
-  let cameraUp = vec3.fromValues(0.0, 1.0, 0.0);
-
+function createCamera(
+  cameraPos = vec3.fromValues(0.0, 0.0, 3.0),
+  cameraFront = vec3.fromValues(0.0, 0.0, -1.0),
+  cameraUp = vec3.fromValues(0.0, 1.0, 0.0)
+) {
   let mouseX = 400;
   let mouseY = 300;
 
@@ -53,6 +53,15 @@ function createCamera() {
 
     vec3.set(cameraFront, x, y, z);
     vec3.normalize(cameraFront, cameraFront);
+
+    let right = vec3.cross(
+      vec3.create(),
+      vec3.fromValues(0, 1, 0),
+      cameraFront
+    );
+
+    vec3.cross(cameraUp, cameraFront, right);
+    vec3.normalize(cameraUp, cameraUp);
   }
 
   function moveCamera(deltaTime, movementDirections) {
