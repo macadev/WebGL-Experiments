@@ -19,6 +19,8 @@ let skullMeshes = [];
 let socket;
 let gameState;
 
+let inputSequenceNumber = 0;
+
 function main() {
   const canvas = document.querySelector('#glCanvas');
   // Initialize the GL context
@@ -113,7 +115,9 @@ function main() {
         z: cameraComponents.cameraUp[2],
       },
       movementDirections: Array.from(movementDirections),
+      inputSequenceNumber,
     });
+    inputSequenceNumber++;
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque
     gl.clearDepth(1.0); // Clear everything
