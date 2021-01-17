@@ -103,6 +103,8 @@ function main() {
     camera.moveCamera(deltaTime, movementDirections);
 
     let cameraComponents = camera.getComponentVectors();
+
+    inputSequenceNumber++;
     socket.emit('client-update', {
       cameraFront: {
         x: cameraComponents.cameraFront[0],
@@ -117,7 +119,6 @@ function main() {
       movementDirections: Array.from(movementDirections),
       inputSequenceNumber,
     });
-    inputSequenceNumber++;
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque
     gl.clearDepth(1.0); // Clear everything

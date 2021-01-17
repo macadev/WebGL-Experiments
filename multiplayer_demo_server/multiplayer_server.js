@@ -9,18 +9,24 @@ const io = require('socket.io')(server);
 
 app.use(express.static(path.join(__dirname, '/../public')));
 
-// 50 ms updates to clients
-const SERVER_TICK_RATE_MS = 50;
-const SERVER_TICK_RATE_SECONDS = 0.05;
+// Server running simulation 60 times per seconds
+// 1000 / 60 = 16.666 ms
+// Because the server is running at a similar frame rate as the client I don't have to worry about inputs stacking too much.
+const SERVER_TICK_RATE_MS = 16.6;
+const SERVER_TICK_RATE_SECONDS = 0.0166;
 
 let players = {};
 
-let inputQueue = [];
-
 function createWorldStatePayload(players) {
+  // World state is composed of: positions, camera vectors, last acked sequence number
   const worldState = {};
   Object.keys(players).map((socketId) => {
-    worldState[socketId] = players[socketId].getCameraComponents();
+    let player = players[socketId];
+
+    worldState[socketId] = {
+      ...player.getCameraComponents(),
+      lastAckedSequenceNumber: player.getLastAckedSequenceNumber(),
+    };
   });
 
   return worldState;
@@ -33,8 +39,8 @@ io.on('connection', (socket) => {
 
   socket.emit('ack-join', createWorldStatePayload(players));
 
-  socket.on('client-update', function (clientInputs) {
-    inputQueue.push({ socketId: socket.id, ...clientInputs });
+  socket.on('client-update', function (clientInput) {
+    players[socket.id].queueInput(clientInput);
   });
 
   socket.on('disconnect', () => {
@@ -43,32 +49,14 @@ io.on('connection', (socket) => {
   });
 });
 
-function movePlayers(players, inputQueue) {
-  let playersProcessed = new Set();
-  for (let input of inputQueue) {
-    let playerSocketId = input.socketId;
-    if (playersProcessed.has(playerSocketId)) continue;
-
-    let playerToMove = players[playerSocketId];
-
-    playerToMove.setCameraFront(
-      input.cameraFront.x,
-      input.cameraFront.y,
-      input.cameraFront.z
-    );
-    playerToMove.setCameraUp(
-      input.cameraUp.x,
-      input.cameraUp.y,
-      input.cameraUp.z
-    );
-    playerToMove.move(SERVER_TICK_RATE_SECONDS, input.movementDirections);
-
-    playersProcessed.add(playerSocketId);
+function movePlayers(players) {
+  for (let player of Object.values(players)) {
+    player.move(SERVER_TICK_RATE_SECONDS);
   }
 }
 
 setInterval(function () {
-  movePlayers(players, inputQueue);
+  movePlayers(players);
   inputQueue = [];
   io.emit('server-update', createWorldStatePayload(players));
 }, SERVER_TICK_RATE_MS);
