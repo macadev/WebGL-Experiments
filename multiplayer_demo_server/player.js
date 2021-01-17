@@ -21,7 +21,6 @@ class Player {
 
   move(deltaTime) {
     let lastSeqNumber;
-    console.log(this.#lastAckedSequenceNumber);
 
     for (let input of this.#inputs) {
       // Skip inputs that have old sequence numbers

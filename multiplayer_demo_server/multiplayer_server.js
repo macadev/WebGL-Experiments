@@ -9,11 +9,14 @@ const io = require('socket.io')(server);
 
 app.use(express.static(path.join(__dirname, '/../public')));
 
-// Server running simulation 60 times per seconds
+// Server running game simulation 60 times per seconds
 // 1000 / 60 = 16.666 ms
 // Because the server is running at a similar frame rate as the client I don't have to worry about inputs stacking too much.
-const SERVER_TICK_RATE_MS = 16.6;
-const SERVER_TICK_RATE_SECONDS = 0.0166;
+const SERVER_GAME_SIMULATION_TICK_RATE_MS = 16.6;
+const SERVER_GAME_SIMULATION_TICK_RATE_SECONDS = 0.0166;
+
+// We send updates to clients every 45 ms (22 times per second)
+const SERVER_UPDATE_TICK_RATE_MS = 45;
 
 let players = {};
 
@@ -51,14 +54,21 @@ io.on('connection', (socket) => {
 
 function movePlayers(players) {
   for (let player of Object.values(players)) {
-    player.move(SERVER_TICK_RATE_SECONDS);
+    player.move(SERVER_GAME_SIMULATION_TICK_RATE_SECONDS);
   }
 }
 
-setInterval(function () {
+// Game loop - runs the game simulation.
+// This runs very fast - 66 times per second
+setInterval(() => {
   movePlayers(players);
   inputQueue = [];
+}, SERVER_GAME_SIMULATION_TICK_RATE_MS);
+
+// Update loop - send the world state to the clients
+// This one runs a bit slower. We send updates 22 times per second.
+setInterval(() => {
   io.emit('server-update', createWorldStatePayload(players));
-}, SERVER_TICK_RATE_MS);
+}, SERVER_UPDATE_TICK_RATE_MS);
 
 server.listen(8080, () => console.log('Listening on port 8080!'));
