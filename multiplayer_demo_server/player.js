@@ -5,8 +5,7 @@ class Player {
   #cameraFront = vec3.fromValues(0.0, 0.0, -1.0);
   #cameraUp = vec3.fromValues(0.0, 1.0, 0.0);
 
-  // At some point this number is going to get very very big. It probably makes sense to reset it to 0 at some point
-  // in the simulation.
+  // At some point this number is going to get very very big. It probably makes sense to reset it to 0 eventually.
   #lastAckedSequenceNumber = 0;
 
   // Queue of inputs received from the client that controls the Player instance.
