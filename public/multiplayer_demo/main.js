@@ -275,6 +275,20 @@ document.addEventListener('keyup', function (e) {
   }
 });
 
+function createPingTimer(socket) {
+  let pingContainer = document.getElementById('ping');
+  console.log(pingContainer);
+
+  socket.on('ping', (epochMilliseconds) => {
+    let roundTripTimeMs = Date.now() - epochMilliseconds;
+    pingContainer.innerText = roundTripTimeMs;
+  });
+
+  setInterval(() => {
+    socket.emit('ping', Date.now());
+  }, 1000);
+}
+
 function connectToServer() {
   socket = io.connect();
 
@@ -287,6 +301,8 @@ function connectToServer() {
   socket.on('server-update', function (updatedGameState) {
     gameState = updatedGameState;
   });
+
+  createPingTimer(socket);
 }
 
 window.onload = connectToServer;

@@ -42,13 +42,20 @@ io.on('connection', (socket) => {
 
   socket.emit('ack-join', createWorldStatePayload(players));
 
-  socket.on('client-update', function (clientInput) {
+  socket.on('client-update', (clientInput) => {
     players[socket.id].queueInput(clientInput);
   });
 
   socket.on('disconnect', () => {
     console.log('disconnect taking place', socket.id);
     delete players[socket.id];
+  });
+
+  // Client sends us an epoch indicating when they started the ping call
+  // We respond with the same epoch. The client will compare it
+  // with their current time to calculate the round trip time.
+  socket.on('ping', (pingCallEpoch) => {
+    socket.emit('ping', pingCallEpoch);
   });
 });
 
