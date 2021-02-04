@@ -1,8 +1,8 @@
 import { initShaderProgram } from '../engine/shader.js';
 import { vertexShaderCode, fragmentShaderCode } from './glsl_shaders.js';
-import { createCamera } from '../engine/camera.js';
 import { ModelLoader } from '../engine/gltf_loader.js';
 import { Mesh } from '../engine/mesh.js';
+import ClientSidePlayer from './clientSidePlayer.js';
 import DIRECTIONS from '../engine/direction.js';
 
 let mouseX = 400;
@@ -12,14 +12,12 @@ let then = 0;
 
 let movementDirections = new Set();
 
-let camera;
+let player;
 
 let skullMeshes = [];
 
 let socket;
 let gameState;
-
-let inputSequenceNumber = 0;
 
 function main() {
   const canvas = document.querySelector('#glCanvas');
@@ -54,7 +52,7 @@ function main() {
   );
 
   let initialPlayerState = gameState[socket.id];
-  camera = createCamera(
+  player = new ClientSidePlayer(
     vec3.fromValues(
       initialPlayerState.position.x,
       initialPlayerState.position.y,
@@ -99,26 +97,14 @@ function main() {
     const deltaTime = now - then;
     then = now;
 
-    camera.rotateCamera(mouseX, mouseY);
-    camera.moveCamera(deltaTime, movementDirections);
+    let clientUpdate = player.processInputs(
+      deltaTime,
+      movementDirections,
+      mouseX,
+      mouseY
+    );
 
-    let cameraComponents = camera.getComponentVectors();
-
-    inputSequenceNumber++;
-    socket.emit('client-update', {
-      cameraFront: {
-        x: cameraComponents.cameraFront[0],
-        y: cameraComponents.cameraFront[1],
-        z: cameraComponents.cameraFront[2],
-      },
-      cameraUp: {
-        x: cameraComponents.cameraUp[0],
-        y: cameraComponents.cameraUp[1],
-        z: cameraComponents.cameraUp[2],
-      },
-      movementDirections: Array.from(movementDirections),
-      inputSequenceNumber,
-    });
+    socket.emit('client-update', clientUpdate);
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque
     gl.clearDepth(1.0); // Clear everything
@@ -127,7 +113,17 @@ function main() {
     // Clear the canvas before we start drawing on it.
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    let viewMatrix = camera.getViewMatrix();
+    let cameraComponents = player.getComponentVectors();
+    let viewMatrix = mat4.lookAt(
+      mat4.create(),
+      cameraComponents.position,
+      vec3.add(
+        vec3.create(),
+        cameraComponents.position,
+        cameraComponents.cameraFront
+      ),
+      cameraComponents.cameraUp
+    );
 
     const fieldOfView = (45 * Math.PI) / 180; // in radians
     const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
@@ -277,7 +273,6 @@ document.addEventListener('keyup', function (e) {
 
 function createPingTimer(socket) {
   let pingContainer = document.getElementById('ping');
-  console.log(pingContainer);
 
   socket.on('ping', (epochMilliseconds) => {
     let roundTripTimeMs = Date.now() - epochMilliseconds;
