@@ -5,10 +5,20 @@ import { Mesh } from '../engine/mesh.js';
 import ClientSidePlayer from './clientSidePlayer.js';
 import DIRECTIONS from '../engine/direction.js';
 
+const MS_PER_UPDATE = 16.6; // 60 fps
+const SECONDS_PER_UPDATE = MS_PER_UPDATE * 0.001;
+
+const fpsMeter = new FPSMeter({
+  decimals: 0,
+  graph: true,
+  theme: 'dark',
+  left: 'auto',
+  right: '5px',
+  maxFps: 100,
+});
+
 let mouseX = 400;
 let mouseY = 300;
-
-let then = 0;
 
 let movementDirections = new Set();
 
@@ -92,19 +102,35 @@ function main() {
 
   gl.useProgram(shaderProgram);
 
-  function render(now) {
-    now *= 0.001; // convert to seconds
-    const deltaTime = now - then;
-    then = now;
+  let previousMs = 0;
+  let lagMs = 0;
+  function gameLoop() {
+    let nowMs = window.performance.now();
+    let deltaMs = nowMs - previousMs;
+    previousMs = nowMs;
+    lagMs += deltaMs;
 
-    let clientUpdate = player.processInputs(
-      deltaTime,
-      movementDirections,
-      mouseX,
-      mouseY
-    );
+    // Simulation time got huge. Something very bad is happening.
+    // Clamp it down to 1 frame.
+    if (lagMs >= 1000) {
+      console.log('Simulation time over 1 second. Clamping.', lagMs);
+      lagMs = MS_PER_UPDATE;
+    }
 
-    socket.emit('client-update', clientUpdate);
+    let clientUpdate;
+    while (lagMs >= MS_PER_UPDATE) {
+      clientUpdate = player.processInputs(
+        SECONDS_PER_UPDATE, // TODO: need to stop using seconds here
+        movementDirections,
+        mouseX,
+        mouseY
+      );
+      lagMs -= MS_PER_UPDATE;
+    }
+
+    if (clientUpdate !== undefined) {
+      socket.emit('client-update', clientUpdate);
+    }
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque
     gl.clearDepth(1.0); // Clear everything
@@ -144,83 +170,88 @@ function main() {
       viewMatrix
     );
 
-    if (skullMeshes.length > 0) {
-      for (const [socketId, playerData] of Object.entries(gameState)) {
-        if (socketId === socket.id) continue;
-
-        let playerCameraUp = vec3.fromValues(
-          playerData.cameraUp.x,
-          playerData.cameraUp.y,
-          playerData.cameraUp.z
-        );
-
-        let playerCameraFront = vec3.fromValues(
-          playerData.cameraFront.x,
-          playerData.cameraFront.y,
-          playerData.cameraFront.z
-        );
-
-        let playerCameraPosition = vec3.fromValues(
-          playerData.position.x,
-          playerData.position.y,
-          playerData.position.z
-        );
-
-        vec3.normalize(playerCameraUp, playerCameraUp);
-        vec3.normalize(playerCameraFront, playerCameraFront);
-
-        let worldForwardToLocalForward = quat.create();
-        quat.rotationTo(
-          worldForwardToLocalForward,
-          vec3.fromValues(0, 0, -1),
-          playerCameraFront
-        );
-
-        let rotatedWorldUp = vec3.transformQuat(
-          vec3.create(),
-          vec3.fromValues(0, 1, 0),
-          worldForwardToLocalForward
-        );
-
-        let fromRotatedWorldUpToLocalUp = quat.create();
-        quat.rotationTo(
-          fromRotatedWorldUpToLocalUp,
-          rotatedWorldUp,
-          playerCameraUp
-        );
-
-        let lookRotation = quat.multiply(
-          quat.create(),
-          fromRotatedWorldUpToLocalUp,
-          worldForwardToLocalForward
-        );
-
-        quat.normalize(lookRotation, lookRotation);
-
-        let modelMat = mat4.create();
-
-        let translationMat = mat4.create();
-        mat4.translate(translationMat, translationMat, playerCameraPosition);
-
-        mat4.fromQuat(modelMat, lookRotation);
-
-        mat4.rotateY(modelMat, modelMat, glMatrix.toRadian(180.0));
-        mat4.rotateX(modelMat, modelMat, glMatrix.toRadian(-90.0));
-        mat4.multiply(modelMat, translationMat, modelMat);
-
-        gl.uniformMatrix4fv(
-          gl.getUniformLocation(shaderProgram, 'model'),
-          false,
-          modelMat
-        );
-
-        skullMeshes.forEach((sceneObject) => sceneObject.render());
-      }
+    // If skull models haven't finished loading then skip rendering anything
+    if (skullMeshes.length === 0) {
+      requestAnimationFrame(gameLoop);
+      return;
     }
 
-    requestAnimationFrame(render);
+    for (const [socketId, playerData] of Object.entries(gameState)) {
+      if (socketId === socket.id) continue;
+
+      let playerCameraUp = vec3.fromValues(
+        playerData.cameraUp.x,
+        playerData.cameraUp.y,
+        playerData.cameraUp.z
+      );
+
+      let playerCameraFront = vec3.fromValues(
+        playerData.cameraFront.x,
+        playerData.cameraFront.y,
+        playerData.cameraFront.z
+      );
+
+      let playerCameraPosition = vec3.fromValues(
+        playerData.position.x,
+        playerData.position.y,
+        playerData.position.z
+      );
+
+      vec3.normalize(playerCameraUp, playerCameraUp);
+      vec3.normalize(playerCameraFront, playerCameraFront);
+
+      let worldForwardToLocalForward = quat.create();
+      quat.rotationTo(
+        worldForwardToLocalForward,
+        vec3.fromValues(0, 0, -1),
+        playerCameraFront
+      );
+
+      let rotatedWorldUp = vec3.transformQuat(
+        vec3.create(),
+        vec3.fromValues(0, 1, 0),
+        worldForwardToLocalForward
+      );
+
+      let fromRotatedWorldUpToLocalUp = quat.create();
+      quat.rotationTo(
+        fromRotatedWorldUpToLocalUp,
+        rotatedWorldUp,
+        playerCameraUp
+      );
+
+      let lookRotation = quat.multiply(
+        quat.create(),
+        fromRotatedWorldUpToLocalUp,
+        worldForwardToLocalForward
+      );
+
+      quat.normalize(lookRotation, lookRotation);
+
+      let modelMat = mat4.create();
+
+      let translationMat = mat4.create();
+      mat4.translate(translationMat, translationMat, playerCameraPosition);
+
+      mat4.fromQuat(modelMat, lookRotation);
+
+      mat4.rotateY(modelMat, modelMat, glMatrix.toRadian(180.0));
+      mat4.rotateX(modelMat, modelMat, glMatrix.toRadian(-90.0));
+      mat4.multiply(modelMat, translationMat, modelMat);
+
+      gl.uniformMatrix4fv(
+        gl.getUniformLocation(shaderProgram, 'model'),
+        false,
+        modelMat
+      );
+
+      skullMeshes.forEach((sceneObject) => sceneObject.render());
+    }
+
+    requestAnimationFrame(gameLoop);
+    fpsMeter.tick();
   }
-  requestAnimationFrame(render);
+  requestAnimationFrame(gameLoop);
 }
 
 function lockChangeAlert(canvas) {
