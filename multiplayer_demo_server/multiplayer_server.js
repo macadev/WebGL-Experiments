@@ -42,8 +42,8 @@ io.on('connection', (socket) => {
 
   socket.emit('ack-join', createWorldStatePayload(players));
 
-  socket.on('client-update', (clientInput) => {
-    players[socket.id].queueInput(clientInput);
+  socket.on('client-update', (userCommands) => {
+    players[socket.id].queueUserCommands(userCommands);
   });
 
   socket.on('disconnect', () => {
@@ -66,10 +66,9 @@ function movePlayers(players) {
 }
 
 // Game loop - runs the game simulation.
-// This runs very fast - 66 times per second
+// This runs very fast - 60 times per second
 setInterval(() => {
   movePlayers(players);
-  inputQueue = [];
 }, SERVER_GAME_SIMULATION_TICK_RATE_MS);
 
 // Update loop - send the world state to the clients

@@ -9,85 +9,83 @@ class Player {
   #lastAckedSequenceNumber = 0;
 
   // Queue of inputs received from the client that controls the Player instance.
-  #inputs = [];
+  #userCommandsQueue = [];
 
   constructor() {}
 
   // Add an input to the end of the queue of inputs maintained for the player object.
-  queueInput(input) {
-    this.#inputs.push(input);
+  queueUserCommands(userCommands) {
+    this.#userCommandsQueue.push(...userCommands);
   }
 
   move(deltaTime) {
-    let lastSeqNumber;
+    let userCommandToSimulate = this.#userCommandsQueue.shift(); // Pops the first element of the queue
+    if (!userCommandToSimulate) return;
 
-    for (let input of this.#inputs) {
-      // Skip inputs that have old sequence numbers
-      if (input.inputSequenceNumber <= this.#lastAckedSequenceNumber) continue;
+    // Apply the camera vectors contained in the input before moving through space
+    this.setCameraFront(
+      userCommandToSimulate.cameraFront.x,
+      userCommandToSimulate.cameraFront.y,
+      userCommandToSimulate.cameraFront.z
+    );
+    this.setCameraUp(
+      userCommandToSimulate.cameraUp.x,
+      userCommandToSimulate.cameraUp.y,
+      userCommandToSimulate.cameraUp.z
+    );
 
-      // Keep track of the last input sequence number that was applied
-      lastSeqNumber = input.inputSequenceNumber;
+    let movementDirectionsSet = new Set(
+      userCommandToSimulate.movementDirections
+    );
+    let cameraSpeed = 2.5 * deltaTime;
 
-      // Apply the camera vectors contained in each input before moving through space
-      this.setCameraFront(
-        input.cameraFront.x,
-        input.cameraFront.y,
-        input.cameraFront.z
+    if (movementDirectionsSet.has('U')) {
+      vec3.scaleAndAdd(
+        this.#position,
+        this.#position,
+        this.#cameraFront,
+        cameraSpeed
       );
-      this.setCameraUp(input.cameraUp.x, input.cameraUp.y, input.cameraUp.z);
-
-      let movementDirectionsSet = new Set(input.movementDirections);
-      let cameraSpeed = 2.5 * deltaTime;
-
-      if (movementDirectionsSet.has('U')) {
-        vec3.scaleAndAdd(
-          this.#position,
-          this.#position,
-          this.#cameraFront,
-          cameraSpeed
-        );
-      }
-      if (movementDirectionsSet.has('D')) {
-        vec3.scaleAndAdd(
-          this.#position,
-          this.#position,
-          this.#cameraFront,
-          -cameraSpeed
-        );
-      }
-      if (movementDirectionsSet.has('L')) {
-        let horizontalMovementVector = vec3.cross(
-          vec3.create(),
-          this.#cameraFront,
-          this.#cameraUp
-        );
-        vec3.normalize(horizontalMovementVector, horizontalMovementVector);
-        vec3.scaleAndAdd(
-          this.#position,
-          this.#position,
-          horizontalMovementVector,
-          -cameraSpeed
-        );
-      }
-      if (movementDirectionsSet.has('R')) {
-        let horizontalMovementVector = vec3.cross(
-          vec3.create(),
-          this.#cameraFront,
-          this.#cameraUp
-        );
-        vec3.normalize(horizontalMovementVector, horizontalMovementVector);
-        vec3.scaleAndAdd(
-          this.#position,
-          this.#position,
-          horizontalMovementVector,
-          cameraSpeed
-        );
-      }
+    }
+    if (movementDirectionsSet.has('D')) {
+      vec3.scaleAndAdd(
+        this.#position,
+        this.#position,
+        this.#cameraFront,
+        -cameraSpeed
+      );
+    }
+    if (movementDirectionsSet.has('L')) {
+      let horizontalMovementVector = vec3.cross(
+        vec3.create(),
+        this.#cameraFront,
+        this.#cameraUp
+      );
+      vec3.normalize(horizontalMovementVector, horizontalMovementVector);
+      vec3.scaleAndAdd(
+        this.#position,
+        this.#position,
+        horizontalMovementVector,
+        -cameraSpeed
+      );
+    }
+    if (movementDirectionsSet.has('R')) {
+      let horizontalMovementVector = vec3.cross(
+        vec3.create(),
+        this.#cameraFront,
+        this.#cameraUp
+      );
+      vec3.normalize(horizontalMovementVector, horizontalMovementVector);
+      vec3.scaleAndAdd(
+        this.#position,
+        this.#position,
+        horizontalMovementVector,
+        cameraSpeed
+      );
     }
 
-    // Store the sequence number of the last applied input, and clear the queue.
-    if (lastSeqNumber) this.#lastAckedSequenceNumber = lastSeqNumber;
-    this.#inputs = [];
+    // Store the sequence number of the last applied input.
+    this.#lastAckedSequenceNumber = userCommandToSimulate.inputSequenceNumber;
   }
 
   getCameraComponents() {

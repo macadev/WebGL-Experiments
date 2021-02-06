@@ -3,6 +3,7 @@ import { vertexShaderCode, fragmentShaderCode } from './glsl_shaders.js';
 import { ModelLoader } from '../engine/gltf_loader.js';
 import { Mesh } from '../engine/mesh.js';
 import ClientSidePlayer from './clientSidePlayer.js';
+import UserCommandManager from './userCommandManager.js';
 import DIRECTIONS from '../engine/direction.js';
 
 const MS_PER_UPDATE = 16.6; // 60 fps
@@ -23,6 +24,7 @@ let mouseY = 300;
 let movementDirections = new Set();
 
 let player;
+let userCommandManager;
 
 let skullMeshes = [];
 
@@ -79,6 +81,7 @@ function main() {
       initialPlayerState.cameraUp.z
     )
   );
+  userCommandManager = new UserCommandManager(socket);
 
   const shaderProgram = initShaderProgram(
     gl,
@@ -117,19 +120,16 @@ function main() {
       lagMs = MS_PER_UPDATE;
     }
 
-    let clientUpdate;
+    let userCommand;
     while (lagMs >= MS_PER_UPDATE) {
-      clientUpdate = player.processInputs(
+      userCommand = player.processInputs(
         SECONDS_PER_UPDATE, // TODO: need to stop using seconds here
         movementDirections,
         mouseX,
         mouseY
       );
+      userCommandManager.handleUserCommand(userCommand);
       lagMs -= MS_PER_UPDATE;
-    }
-
-    if (clientUpdate !== undefined) {
-      socket.emit('client-update', clientUpdate);
     }
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque

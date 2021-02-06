@@ -47,12 +47,12 @@ class ClientSidePlayer {
       inputSequenceNumber: this.#inputSequenceNumber,
     });
 
-    return this.#buildClientUpdateObject(movementDirections);
+    return this.#createUserCommand(movementDirections);
   }
 
   // Returns the JS object we'll send to server indicating the keyboard inputs, camera vectors
   // and the input sequence number.
-  #buildClientUpdateObject(movementDirections) {
+  #createUserCommand(movementDirections) {
     return {
       cameraFront: {
         x: this.#cameraFront[0],
