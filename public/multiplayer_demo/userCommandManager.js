@@ -6,15 +6,21 @@ class UserCommandManager {
 
   constructor(socket) {
     this.#socket = socket;
+
+    // 30 times per second send the inputs to the server
+    setInterval(() => {
+      this.#socket.emit('client-update', this.#userCommandsToSendToServer);
+      this.#userCommandsToSendToServer = [];
+    }, 33.33);
   }
 
   handleUserCommand(clientCommand) {
     this.#userCommandsToSendToServer.push(clientCommand);
 
-    if (this.#userCommandsToSendToServer.length >= 2) {
-      this.#socket.emit('client-update', this.#userCommandsToSendToServer);
-      this.#userCommandsToSendToServer = [];
-    }
+    // if (this.#userCommandsToSendToServer.length >= 2) {
+    //   this.#socket.emit('client-update', this.#userCommandsToSendToServer);
+    //   this.#userCommandsToSendToServer = [];
+    // }
   }
 }
 

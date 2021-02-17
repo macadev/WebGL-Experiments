@@ -8,35 +8,22 @@ class Player {
   // At some point this number is going to get very very big. It probably makes sense to reset it to 0 eventually.
   #lastAckedSequenceNumber = 0;
 
-  // Queue of inputs received from the client that controls the Player instance.
-  #userCommandsQueue = [];
-
   constructor() {}
 
-  // Add an input to the end of the queue of inputs maintained for the player object.
-  queueUserCommands(userCommands) {
-    this.#userCommandsQueue.push(...userCommands);
-  }
-
-  move(deltaTime) {
-    let userCommandToSimulate = this.#userCommandsQueue.shift(); // Pops the first element of the queue
-    if (!userCommandToSimulate) return;
-
+  move(userCommand, deltaTime) {
     // Apply the camera vectors contained in the input before moving through space
     this.setCameraFront(
-      userCommandToSimulate.cameraFront.x,
-      userCommandToSimulate.cameraFront.y,
-      userCommandToSimulate.cameraFront.z
+      userCommand.cameraFront.x,
+      userCommand.cameraFront.y,
+      userCommand.cameraFront.z
     );
     this.setCameraUp(
-      userCommandToSimulate.cameraUp.x,
-      userCommandToSimulate.cameraUp.y,
-      userCommandToSimulate.cameraUp.z
+      userCommand.cameraUp.x,
+      userCommand.cameraUp.y,
+      userCommand.cameraUp.z
     );
 
-    let movementDirectionsSet = new Set(
-      userCommandToSimulate.movementDirections
-    );
+    let movementDirectionsSet = new Set(userCommand.movementDirections);
     let cameraSpeed = 2.5 * deltaTime;
 
     if (movementDirectionsSet.has('U')) {
@@ -85,7 +72,7 @@ class Player {
     }
 
     // Store the sequence number of the last applied input.
-    this.#lastAckedSequenceNumber = userCommandToSimulate.inputSequenceNumber;
+    this.#lastAckedSequenceNumber = userCommand.inputSequenceNumber;
   }
 
   getCameraComponents() {

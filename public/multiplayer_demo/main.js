@@ -3,10 +3,9 @@ import { vertexShaderCode, fragmentShaderCode } from './glsl_shaders.js';
 import { ModelLoader } from '../engine/gltf_loader.js';
 import { Mesh } from '../engine/mesh.js';
 import ClientSidePlayer from './clientSidePlayer.js';
-import UserCommandManager from './userCommandManager.js';
 import DIRECTIONS from '../engine/direction.js';
 
-const MS_PER_UPDATE = 16.6; // 60 fps
+const MS_PER_UPDATE = 1000 / 60; // 60 fps
 const SECONDS_PER_UPDATE = MS_PER_UPDATE * 0.001;
 
 const fpsMeter = new FPSMeter({
@@ -24,7 +23,6 @@ let mouseY = 300;
 let movementDirections = new Set();
 
 let player;
-let userCommandManager;
 
 let skullMeshes = [];
 
@@ -81,7 +79,6 @@ function main() {
       initialPlayerState.cameraUp.z
     )
   );
-  userCommandManager = new UserCommandManager(socket);
 
   const shaderProgram = initShaderProgram(
     gl,
@@ -114,8 +111,10 @@ function main() {
     lagMs += deltaMs;
 
     // Simulation time got huge. Something very bad is happening.
-    // Clamp it down to 1 frame.
-    if (lagMs >= 1000) {
+    // Clamp it down to 1 frame. If lagMs accumulates but is under this
+    // threshold then the client will spam the server with a lot of
+    // packets. Not good.
+    if (lagMs >= 100) {
       console.log('Simulation time over 1 second. Clamping.', lagMs);
       lagMs = MS_PER_UPDATE;
     }
@@ -128,7 +127,10 @@ function main() {
         mouseX,
         mouseY
       );
-      userCommandManager.handleUserCommand(userCommand);
+
+      // We are sending an user command on every simulation frame. That means
+      // 60 times a second at our current simulation step.
+      socket.emit('client-update', userCommand);
       lagMs -= MS_PER_UPDATE;
     }
 
