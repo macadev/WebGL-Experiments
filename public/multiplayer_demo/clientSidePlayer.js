@@ -15,9 +15,6 @@ class ClientSidePlayer {
 
   #inputSequenceNumber = 0;
 
-  // Local history of inputs made by the player
-  #inputHistory = [];
-
   constructor(position, cameraFront, cameraUp) {
     this.#position = position;
     this.#cameraFront = cameraFront;
@@ -37,17 +34,36 @@ class ClientSidePlayer {
     this.#moveCamera(deltaTime, movementDirections);
     this.#inputSequenceNumber++;
 
-    // This is the 'timeline' of inputs we'll use to enable client-side prediction which is
-    // reconciled with the authoritative updates from the server.
-    this.#inputHistory.push({
-      position: vec3.clone(this.#position),
-      cameraFront: vec3.clone(this.#cameraFront),
-      cameraUp: vec3.clone(this.#cameraUp),
-      movementDirections: new Set(movementDirections), // Clone the set
-      inputSequenceNumber: this.#inputSequenceNumber,
-    });
-
     return this.#createUserCommand(movementDirections);
+  }
+
+  // Called to reapply old user commands during prediction and reconciliation.
+  applyUserCommand(deltaTime, userCommand) {
+    this.setCameraFront(
+      userCommand.cameraFront.x,
+      userCommand.cameraFront.y,
+      userCommand.cameraFront.z
+    );
+
+    this.setCameraUp(
+      userCommand.cameraUp.x,
+      userCommand.cameraUp.y,
+      userCommand.cameraUp.z
+    );
+
+    this.#moveCamera(deltaTime, new Set(userCommand.movementDirections));
+  }
+
+  setCameraUp(x, y, z) {
+    this.#cameraUp = vec3.fromValues(x, y, z);
+  }
+
+  setCameraFront(x, y, z) {
+    this.#cameraFront = vec3.fromValues(x, y, z);
+  }
+
+  setPosition(x, y, z) {
+    this.#position = vec3.fromValues(x, y, z);
   }
 
   // Returns the JS object we'll send to server indicating the keyboard inputs, camera vectors
