@@ -6,7 +6,8 @@ function reconcilePredictionWithServerState(
   latestGameStateFromServer,
   userCommandHistory
 ) {
-  let authoritativeStateForLocalPlayer = latestGameStateFromServer[socketId];
+  let authoritativeStateForLocalPlayer =
+    latestGameStateFromServer.players[socketId];
 
   let lastAckedUserCommandSeqNumber =
     authoritativeStateForLocalPlayer.lastAckedSequenceNumber;

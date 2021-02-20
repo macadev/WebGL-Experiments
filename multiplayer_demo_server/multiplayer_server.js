@@ -23,11 +23,14 @@ let userCommands = [];
 
 function createWorldStatePayload(players) {
   // World state is composed of: positions, camera vectors, last acked sequence number
-  const worldState = {};
+  const worldState = {
+    serverTime: Date.now(),
+    players: {},
+  };
   Object.keys(players).map((socketId) => {
     let player = players[socketId];
 
-    worldState[socketId] = {
+    worldState.players[socketId] = {
       ...player.getCameraComponents(),
       lastAckedSequenceNumber: player.getLastAckedSequenceNumber(),
     };

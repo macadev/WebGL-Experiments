@@ -179,7 +179,9 @@ function main() {
       return;
     }
 
-    for (const [socketId, playerData] of Object.entries(latestGameStateFrame)) {
+    for (const [socketId, playerData] of Object.entries(
+      latestGameStateFrame.players
+    )) {
       if (socketId === socket.id) continue;
 
       let playerCameraUp = vec3.fromValues(
@@ -328,7 +330,7 @@ function connectToServer() {
     gameStateFrames.push(initialGameState);
 
     // Initialize the local player's state object
-    let initialPlayerState = initialGameState[socket.id];
+    let initialPlayerState = initialGameState.players[socket.id];
     player = new ClientSidePlayer(
       vec3.fromValues(
         initialPlayerState.position.x,
