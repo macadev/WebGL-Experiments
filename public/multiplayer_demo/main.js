@@ -6,6 +6,7 @@ import ClientSidePlayer from './clientSidePlayer.js';
 import DIRECTIONS from '../engine/direction.js';
 import reconcilePredictionWithServerState from './prediction.js';
 import { MS_PER_UPDATE, SECONDS_PER_UPDATE } from './clientConstants.js';
+import interpolatePlayerEntities from './interpolation.js';
 
 const fpsMeter = new FPSMeter({
   decimals: 0,
@@ -92,7 +93,7 @@ function main() {
   let previousMs = 0;
   let lagMs = 0;
   function gameLoop() {
-    let nowMs = window.performance.now();
+    let nowMs = Date.now();
     let deltaMs = nowMs - previousMs;
     previousMs = nowMs;
     lagMs += deltaMs;
@@ -134,6 +135,12 @@ function main() {
         userCommandHistory
       );
     }
+
+    let playerDataForRendering = interpolatePlayerEntities(
+      socket.id,
+      gameStateFrames,
+      nowMs - 100 // Other players are simulated 100 ms in the past. We interpolate between their updates.
+    );
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque
     gl.clearDepth(1.0); // Clear everything
@@ -180,36 +187,18 @@ function main() {
     }
 
     for (const [socketId, playerData] of Object.entries(
-      latestGameStateFrame.players
+      playerDataForRendering
     )) {
       if (socketId === socket.id) continue;
 
-      let playerCameraUp = vec3.fromValues(
-        playerData.cameraUp.x,
-        playerData.cameraUp.y,
-        playerData.cameraUp.z
-      );
-
-      let playerCameraFront = vec3.fromValues(
-        playerData.cameraFront.x,
-        playerData.cameraFront.y,
-        playerData.cameraFront.z
-      );
-
-      let playerCameraPosition = vec3.fromValues(
-        playerData.position.x,
-        playerData.position.y,
-        playerData.position.z
-      );
-
-      vec3.normalize(playerCameraUp, playerCameraUp);
-      vec3.normalize(playerCameraFront, playerCameraFront);
+      vec3.normalize(playerData.cameraUp, playerData.cameraUp);
+      vec3.normalize(playerData.cameraFront, playerData.cameraFront);
 
       let worldForwardToLocalForward = quat.create();
       quat.rotationTo(
         worldForwardToLocalForward,
         vec3.fromValues(0, 0, -1),
-        playerCameraFront
+        playerData.cameraFront
       );
 
       let rotatedWorldUp = vec3.transformQuat(
@@ -222,7 +211,7 @@ function main() {
       quat.rotationTo(
         fromRotatedWorldUpToLocalUp,
         rotatedWorldUp,
-        playerCameraUp
+        playerData.cameraUp
       );
 
       let lookRotation = quat.multiply(
@@ -236,7 +225,7 @@ function main() {
       let modelMat = mat4.create();
 
       let translationMat = mat4.create();
-      mat4.translate(translationMat, translationMat, playerCameraPosition);
+      mat4.translate(translationMat, translationMat, playerData.position);
 
       mat4.fromQuat(modelMat, lookRotation);
 
