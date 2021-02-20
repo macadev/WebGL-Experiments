@@ -353,6 +353,7 @@ function connectToServer() {
   socket.on('server-update', function (updatedGameState) {
     gameStateFrames.push(updatedGameState);
     // Arbitrary rule. We only keep the 60 most recent game states.
+    // shift() can be O(n), so this might be a little slow.
     if (gameStateFrames.length > 60) {
       gameStateFrames.shift();
     }

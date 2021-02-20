@@ -64,6 +64,10 @@ io.on('connection', (socket) => {
 function simulateGame() {
   for (let userCommand of userCommands) {
     let player = players[userCommand.socketId];
+    if (player === undefined) {
+      // Player droppped and had commands queued in. Ignore them.
+      continue;
+    }
     player.move(userCommand, SERVER_GAME_SIMULATION_TICK_RATE_SECONDS);
   }
   // Flush the queue
