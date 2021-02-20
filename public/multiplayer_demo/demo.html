@@ -23,6 +23,13 @@
         ping (ms):
         <a id="ping"></a>
       </div>
+      <div>
+        <!-- The second value will be selected initially -->
+        <select name="POV" id="povDropDown">
+          <option value="fpv" selected>First Person View</option>
+          <option value="tpv">Third Person View</option>
+        </select>
+      </div>
       <canvas id="glCanvas" width="800" height="600"></canvas>
       <script type="module" src="../engine/gltf_loader.js"></script>
       <script type="module" src="../engine/direction.js"></script>

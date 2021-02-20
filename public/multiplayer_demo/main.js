@@ -8,6 +8,11 @@ import reconcilePredictionWithServerState from './prediction.js';
 import { MS_PER_UPDATE, SECONDS_PER_UPDATE } from './clientConstants.js';
 import interpolatePlayerEntities from './interpolation.js';
 
+const POV_DROP_DOWN_ID = 'povDropDown';
+const FIRST_PERSON_VIEW = 'fpv';
+const THIRD_PERSON_VIEW = 'tpv';
+let playerPoV = FIRST_PERSON_VIEW; // Game starts in first person view by default
+
 const fpsMeter = new FPSMeter({
   decimals: 0,
   graph: true,
@@ -36,6 +41,15 @@ let gameStateFrames = [];
 let userCommandHistory = [];
 
 function main() {
+  document.getElementById(POV_DROP_DOWN_ID).onchange = function () {
+    let pov = document.getElementById(POV_DROP_DOWN_ID).value;
+    if (pov === FIRST_PERSON_VIEW) {
+      playerPoV = FIRST_PERSON_VIEW;
+    } else {
+      playerPoV = THIRD_PERSON_VIEW;
+    }
+  };
+
   const canvas = document.querySelector('#glCanvas');
   // Initialize the GL context
   const gl = canvas.getContext('webgl2');
@@ -150,6 +164,35 @@ function main() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     let cameraComponents = player.getComponentVectors();
+
+    if (playerPoV === THIRD_PERSON_VIEW) {
+      let right = vec3.cross(
+        vec3.create(),
+        cameraComponents.cameraUp,
+        cameraComponents.cameraFront
+      );
+
+      let rotAroundRight = quat.setAxisAngle(
+        quat.create(),
+        right,
+        glMatrix.toRadian(30)
+      );
+
+      vec3.transformQuat(
+        cameraComponents.cameraFront,
+        cameraComponents.cameraFront,
+        rotAroundRight
+      );
+
+      // Move the camera back a bit
+      vec3.scaleAndAdd(
+        cameraComponents.position,
+        cameraComponents.position,
+        cameraComponents.cameraFront,
+        -6
+      );
+    }
+
     let viewMatrix = mat4.lookAt(
       mat4.create(),
       cameraComponents.position,
@@ -190,62 +233,69 @@ function main() {
       playerDataForRendering
     )) {
       if (socketId === socket.id) continue;
+      renderSkull(gl, playerData, shaderProgram);
+    }
 
-      vec3.normalize(playerData.cameraUp, playerData.cameraUp);
-      vec3.normalize(playerData.cameraFront, playerData.cameraFront);
-
-      let worldForwardToLocalForward = quat.create();
-      quat.rotationTo(
-        worldForwardToLocalForward,
-        vec3.fromValues(0, 0, -1),
-        playerData.cameraFront
-      );
-
-      let rotatedWorldUp = vec3.transformQuat(
-        vec3.create(),
-        vec3.fromValues(0, 1, 0),
-        worldForwardToLocalForward
-      );
-
-      let fromRotatedWorldUpToLocalUp = quat.create();
-      quat.rotationTo(
-        fromRotatedWorldUpToLocalUp,
-        rotatedWorldUp,
-        playerData.cameraUp
-      );
-
-      let lookRotation = quat.multiply(
-        quat.create(),
-        fromRotatedWorldUpToLocalUp,
-        worldForwardToLocalForward
-      );
-
-      quat.normalize(lookRotation, lookRotation);
-
-      let modelMat = mat4.create();
-
-      let translationMat = mat4.create();
-      mat4.translate(translationMat, translationMat, playerData.position);
-
-      mat4.fromQuat(modelMat, lookRotation);
-
-      mat4.rotateY(modelMat, modelMat, glMatrix.toRadian(180.0));
-      mat4.rotateX(modelMat, modelMat, glMatrix.toRadian(-90.0));
-      mat4.multiply(modelMat, translationMat, modelMat);
-
-      gl.uniformMatrix4fv(
-        gl.getUniformLocation(shaderProgram, 'model'),
-        false,
-        modelMat
-      );
-
-      skullMeshes.forEach((sceneObject) => sceneObject.render());
+    if (playerPoV === THIRD_PERSON_VIEW) {
+      renderSkull(gl, player.getComponentVectors(), shaderProgram);
     }
 
     requestAnimationFrame(gameLoop);
     fpsMeter.tick();
   }
   requestAnimationFrame(gameLoop);
+}
+
+function renderSkull(gl, playerData, shaderProgram) {
+  vec3.normalize(playerData.cameraUp, playerData.cameraUp);
+  vec3.normalize(playerData.cameraFront, playerData.cameraFront);
+
+  let worldForwardToLocalForward = quat.create();
+  quat.rotationTo(
+    worldForwardToLocalForward,
+    vec3.fromValues(0, 0, -1),
+    playerData.cameraFront
+  );
+
+  let rotatedWorldUp = vec3.transformQuat(
+    vec3.create(),
+    vec3.fromValues(0, 1, 0),
+    worldForwardToLocalForward
+  );
+
+  let fromRotatedWorldUpToLocalUp = quat.create();
+  quat.rotationTo(
+    fromRotatedWorldUpToLocalUp,
+    rotatedWorldUp,
+    playerData.cameraUp
+  );
+
+  let lookRotation = quat.multiply(
+    quat.create(),
+    fromRotatedWorldUpToLocalUp,
+    worldForwardToLocalForward
+  );
+
+  quat.normalize(lookRotation, lookRotation);
+
+  let modelMat = mat4.create();
+
+  let translationMat = mat4.create();
+  mat4.translate(translationMat, translationMat, playerData.position);
+
+  mat4.fromQuat(modelMat, lookRotation);
+
+  mat4.rotateY(modelMat, modelMat, glMatrix.toRadian(180.0));
+  mat4.rotateX(modelMat, modelMat, glMatrix.toRadian(-90.0));
+  mat4.multiply(modelMat, translationMat, modelMat);
+
+  gl.uniformMatrix4fv(
+    gl.getUniformLocation(shaderProgram, 'model'),
+    false,
+    modelMat
+  );
+
+  skullMeshes.forEach((sceneObject) => sceneObject.render());
 }
 
 function lockChangeAlert(canvas) {
