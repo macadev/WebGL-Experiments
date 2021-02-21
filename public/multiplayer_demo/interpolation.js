@@ -14,7 +14,7 @@ function interpolatePlayerEntities(
   let foundUpdatesToInterpBetween = false;
   for (
     let i = gameStateFrames.length - 1, j = gameStateFrames.length - 2;
-    j > 0;
+    j >= 0;
     i--, j--
   ) {
     toFrame = gameStateFrames[i];
@@ -39,6 +39,15 @@ function interpolatePlayerEntities(
   let interpolationFactor =
     (interpTimestamp - fromFrame.serverTime) /
     (toFrame.serverTime - fromFrame.serverTime);
+
+  if (interpolationFactor > 1 || interpolationFactor < 0) {
+    console.log('weird interp factor calculated', {
+      interpolationFactor,
+      interpTimestamp,
+      fromFrameServerTime: fromFrame.serverTime,
+      toFrameServerTime: toFrame.serverTime,
+    });
+  }
 
   for (const [socketId, playerData] of Object.entries(fromFrame.players)) {
     if (socketId === playerSocketId) {
