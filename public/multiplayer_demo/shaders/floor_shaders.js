@@ -34,7 +34,7 @@ out vec4 outputColor;
 void main()
 {
     vec3 lightPos = vec3(0.0, 10.0, 5.0);
-    vec3 lightColor = vec3(0.73, 0.0, 0.0);
+    vec3 lightColor = vec3(0.0, 0.73, 0.0);
     vec3 lightDir = normalize(lightPos - worldPosition);
 
     // highp vec3 diff = vec3(1.0, 0.0, 0.0);
@@ -54,4 +54,4 @@ void main()
     // outputColor = vec4(diff, 1.0);
 }`;
 
-export { vertexShaderCode, fragmentShaderCode };
+export default { vertexShaderCode, fragmentShaderCode };

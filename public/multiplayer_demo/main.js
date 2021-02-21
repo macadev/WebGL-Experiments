@@ -1,12 +1,11 @@
-import { initShaderProgram } from '../engine/shader.js';
-import { vertexShaderCode, fragmentShaderCode } from './glsl_shaders.js';
-import { ModelLoader } from '../engine/gltf_loader.js';
-import { Mesh } from '../engine/mesh.js';
-import ClientSidePlayer from './clientSidePlayer.js';
 import DIRECTIONS from '../engine/direction.js';
-import reconcilePredictionWithServerState from './prediction.js';
 import { MS_PER_UPDATE, SECONDS_PER_UPDATE } from './clientConstants.js';
+
+import ClientSidePlayer from './clientSidePlayer.js';
+import reconcilePredictionWithServerState from './prediction.js';
 import interpolatePlayerEntities from './interpolation.js';
+
+import initSkullModel from './models/skull.js';
 
 const POV_DROP_DOWN_ID = 'povDropDown';
 const FIRST_PERSON_VIEW = 'fpv';
@@ -40,8 +39,6 @@ let mouseY = 300;
 let movementDirections = new Set();
 
 let player;
-
-let skullMeshes = [];
 
 let socket;
 
@@ -115,26 +112,7 @@ function main() {
     false
   );
 
-  const shaderProgram = initShaderProgram(
-    gl,
-    vertexShaderCode,
-    fragmentShaderCode
-  );
-
-  let modelLoader = new ModelLoader('skull/scene.gltf', 'skull');
-  modelLoader.getSceneMeshData().then((dataOfMeshes) => {
-    dataOfMeshes.forEach((meshData) => {
-      skullMeshes.push(
-        new Mesh({
-          gl,
-          shaderProgram,
-          ...meshData,
-        })
-      );
-    });
-  });
-
-  gl.useProgram(shaderProgram);
+  let skullModel = initSkullModel(gl);
 
   let previousMs = 0;
   let lagMs = 0;
@@ -266,91 +244,24 @@ function main() {
     const projectionMatrix = mat4.create();
     mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
 
-    gl.uniformMatrix4fv(
-      gl.getUniformLocation(shaderProgram, 'projection'),
-      false,
-      projectionMatrix
-    );
-
-    gl.uniformMatrix4fv(
-      gl.getUniformLocation(shaderProgram, 'view'),
-      false,
-      viewMatrix
-    );
-
-    // If skull models haven't finished loading then skip rendering anything
-    if (skullMeshes.length === 0) {
-      requestAnimationFrame(gameLoop);
-      return;
-    }
+    skullModel.setProjectionMatrix(projectionMatrix);
+    skullModel.setViewMatrix(viewMatrix);
 
     for (const [socketId, playerData] of Object.entries(
       playerDataForRendering
     )) {
       if (socketId === socket.id) continue;
-      renderSkull(gl, playerData, shaderProgram);
+      skullModel.render(playerData);
     }
 
     if (playerPoV === THIRD_PERSON_VIEW) {
-      renderSkull(gl, player.getComponentVectors(), shaderProgram);
+      skullModel.render(player.getComponentVectors());
     }
 
     requestAnimationFrame(gameLoop);
     fpsMeter.tick();
   }
   requestAnimationFrame(gameLoop);
-}
-
-function renderSkull(gl, playerData, shaderProgram) {
-  vec3.normalize(playerData.cameraUp, playerData.cameraUp);
-  vec3.normalize(playerData.cameraFront, playerData.cameraFront);
-
-  let worldForwardToLocalForward = quat.create();
-  quat.rotationTo(
-    worldForwardToLocalForward,
-    vec3.fromValues(0, 0, -1),
-    playerData.cameraFront
-  );
-
-  let rotatedWorldUp = vec3.transformQuat(
-    vec3.create(),
-    vec3.fromValues(0, 1, 0),
-    worldForwardToLocalForward
-  );
-
-  let fromRotatedWorldUpToLocalUp = quat.create();
-  quat.rotationTo(
-    fromRotatedWorldUpToLocalUp,
-    rotatedWorldUp,
-    playerData.cameraUp
-  );
-
-  let lookRotation = quat.multiply(
-    quat.create(),
-    fromRotatedWorldUpToLocalUp,
-    worldForwardToLocalForward
-  );
-
-  quat.normalize(lookRotation, lookRotation);
-
-  let modelMat = mat4.create();
-
-  let translationMat = mat4.create();
-  mat4.translate(translationMat, translationMat, playerData.position);
-
-  mat4.fromQuat(modelMat, lookRotation);
-
-  mat4.rotateY(modelMat, modelMat, glMatrix.toRadian(180.0));
-  mat4.rotateX(modelMat, modelMat, glMatrix.toRadian(-90.0));
-  mat4.multiply(modelMat, translationMat, modelMat);
-
-  gl.uniformMatrix4fv(
-    gl.getUniformLocation(shaderProgram, 'model'),
-    false,
-    modelMat
-  );
-
-  skullMeshes.forEach((sceneObject) => sceneObject.render());
 }
 
 function lockChangeAlert(canvas) {
