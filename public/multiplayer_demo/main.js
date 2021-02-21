@@ -13,6 +13,12 @@ const FIRST_PERSON_VIEW = 'fpv';
 const THIRD_PERSON_VIEW = 'tpv';
 let playerPoV = FIRST_PERSON_VIEW; // Game starts in first person view by default
 
+const SIMULATE_LAG_CHECKBOX_ID = 'simulateLag';
+let simulateLag = false;
+
+const LAG_MS_INPUT_ID = 'simulatedLagAmount';
+let simulatedLagAmount = 0;
+
 const fpsMeter = new FPSMeter({
   decimals: 0,
   graph: true,
@@ -48,6 +54,14 @@ function main() {
     } else {
       playerPoV = THIRD_PERSON_VIEW;
     }
+  };
+
+  document.getElementById(SIMULATE_LAG_CHECKBOX_ID).onchange = function () {
+    simulateLag = this.checked;
+  };
+
+  document.getElementById(LAG_MS_INPUT_ID).onchange = function () {
+    simulatedLagAmount = parseInt(this.value);
   };
 
   const canvas = document.querySelector('#glCanvas');
@@ -135,7 +149,13 @@ function main() {
 
       // We are sending an user command on every simulation frame. That means
       // 60 times a second at our current simulation step.
-      socket.emit('client-update', userCommand);
+      if (simulateLag) {
+        setTimeout(() => {
+          socket.emit('client-update', userCommand);
+        }, simulatedLagAmount);
+      } else {
+        socket.emit('client-update', userCommand);
+      }
       lagMs -= MS_PER_UPDATE;
       didSimulate = true;
     }
@@ -352,12 +372,26 @@ function createPingTimer(socket) {
   let pingContainer = document.getElementById('ping');
 
   socket.on('ping', (epochMilliseconds) => {
-    let roundTripTimeMs = Date.now() - epochMilliseconds;
-    pingContainer.innerText = roundTripTimeMs;
+    if (simulateLag) {
+      setTimeout(() => {
+        let roundTripTimeMs = Date.now() - epochMilliseconds;
+        pingContainer.innerText = roundTripTimeMs;
+      }, simulatedLagAmount);
+    } else {
+      let roundTripTimeMs = Date.now() - epochMilliseconds;
+      pingContainer.innerText = roundTripTimeMs;
+    }
   });
 
   setInterval(() => {
-    socket.emit('ping', Date.now());
+    let pingSentTime = Date.now();
+    if (simulateLag) {
+      setTimeout(() => {
+        socket.emit('ping', pingSentTime);
+      }, simulatedLagAmount);
+    } else {
+      socket.emit('ping', pingSentTime);
+    }
   }, 1000);
 }
 
@@ -391,12 +425,22 @@ function connectToServer() {
     main();
   });
 
-  socket.on('server-update', function (updatedGameState) {
+  function processServerUpdate(updatedGameState) {
     gameStateFrames.push(updatedGameState);
     // Arbitrary rule. We only keep the 60 most recent game states.
     // shift() can be O(n), so this might be a little slow.
     if (gameStateFrames.length > 60) {
       gameStateFrames.shift();
+    }
+  }
+
+  socket.on('server-update', function (updatedGameState) {
+    if (simulateLag) {
+      setTimeout(() => {
+        processServerUpdate(updatedGameState);
+      }, simulatedLagAmount);
+    } else {
+      processServerUpdate(updatedGameState);
     }
   });
 
