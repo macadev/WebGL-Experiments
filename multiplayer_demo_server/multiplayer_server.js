@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const randomColor = require('randomcolor');
 
 const Player = require('./player');
 
@@ -33,6 +34,7 @@ function createWorldStatePayload(players) {
     worldState.players[socketId] = {
       ...player.getCameraComponents(),
       lastAckedSequenceNumber: player.getLastAckedSequenceNumber(),
+      colour: player.getColour(),
     };
   });
 
@@ -42,7 +44,10 @@ function createWorldStatePayload(players) {
 io.on('connection', (socket) => {
   console.log('Nueva conexión!');
 
-  players[socket.id] = new Player();
+  let playerColor = randomColor({ format: 'rgbArray' }).map(
+    (rgbVal) => rgbVal / 255.0
+  );
+  players[socket.id] = new Player(playerColor);
 
   socket.emit('ack-join', createWorldStatePayload(players));
 

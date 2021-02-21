@@ -4,11 +4,14 @@ class Player {
   #position = vec3.fromValues(0.0, 0.0, 0.0);
   #cameraFront = vec3.fromValues(0.0, 0.0, -1.0);
   #cameraUp = vec3.fromValues(0.0, 1.0, 0.0);
+  #colour;
 
   // At some point this number is going to get very very big. It probably makes sense to reset it to 0 eventually.
   #lastAckedSequenceNumber = 0;
 
-  constructor() {}
+  constructor(colour) {
+    this.#colour = colour;
+  }
 
   move(userCommand, deltaTime) {
     // Apply the camera vectors contained in the input before moving through space
@@ -89,6 +92,10 @@ class Player {
 
   getLastAckedSequenceNumber() {
     return this.#lastAckedSequenceNumber;
+  }
+
+  getColour() {
+    return this.#colour;
   }
 
   setCameraFront({ x, y, z }) {

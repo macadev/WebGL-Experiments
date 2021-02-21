@@ -28,30 +28,18 @@ in vec2 texCoord;
 
 uniform sampler2D texture1;
 uniform int shouldSampleTexture;
+uniform vec3 playerColour;
 
 out vec4 outputColor;
 
 void main()
 {
-    vec3 lightPos = vec3(0.0, 10.0, 5.0);
-    vec3 lightColor = vec3(0.73, 0.0, 0.0);
+    vec3 lightPos = vec3(0.0, 10.0, 0.0);
+    vec3 lightColor = vec3(1.0, 1.0, 1.0);
     vec3 lightDir = normalize(lightPos - worldPosition);
 
-    // highp vec3 diff = vec3(1.0, 0.0, 0.0);
-    
-    // highp vec3 diff = (max(dot(lightDir, worldNormal), 0.0) * lightColor) * texture2D(texture1, texCoord).rgb;
-    // highp vec3 diff = (max(dot(lightDir, worldNormal), 0.0)) * texture2D(texture1, texCoord).rgb;
-    // highp vec3 diff = ((max(dot(lightDir, worldNormal), 0.0)) * texture2D(texture1, texCoord).rgb) + lightColor ;
-
-    // vec3 diff;
-    // if (shouldSampleTexture == 1) {
-    //     diff = (max(dot(lightDir, worldNormal), 0.0)) * texture(texture1, texCoord).rgb;
-    // } else {
-    //    diff = (max(dot(lightDir, worldNormal), 0.0) * lightColor);
-    // }
-
-    outputColor = vec4(texture(texture1, texCoord).rgb + vec3(0.3, 0.0, 0.0), 1.0);
-    // outputColor = vec4(diff, 1.0);
+    vec3 diff = ((max(dot(lightDir, worldNormal), 0.0)) + vec3(0.3, 0.3, 0.3)) * playerColour;
+    outputColor = vec4(diff, 1.0);
 }`;
 
 export default { vertexShaderCode, fragmentShaderCode };

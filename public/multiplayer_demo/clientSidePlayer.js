@@ -13,12 +13,15 @@ class ClientSidePlayer {
   #pitch = 0.0;
   #yaw = -90.0;
 
+  #colour;
+
   #inputSequenceNumber = 0;
 
-  constructor(position, cameraFront, cameraUp) {
+  constructor(position, cameraFront, cameraUp, colour) {
     this.#position = position;
     this.#cameraFront = cameraFront;
     this.#cameraUp = cameraUp;
+    this.#colour = colour;
   }
 
   getComponentVectors() {
@@ -27,6 +30,10 @@ class ClientSidePlayer {
       cameraFront: vec3.clone(this.#cameraFront),
       cameraUp: vec3.clone(this.#cameraUp),
     };
+  }
+
+  getColour() {
+    return this.#colour;
   }
 
   processInputs(deltaTime, movementDirections, mouseX, mouseY) {

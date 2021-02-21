@@ -257,7 +257,10 @@ function main() {
     }
 
     if (playerPoV === THIRD_PERSON_VIEW) {
-      skullModel.render(player.getComponentVectors());
+      skullModel.render({
+        ...player.getComponentVectors(),
+        colour: player.getColour(),
+      });
     }
 
     floorModel.setProjectionMatrix(projectionMatrix);
@@ -371,7 +374,8 @@ function connectToServer() {
         initialPlayerState.cameraUp.x,
         initialPlayerState.cameraUp.y,
         initialPlayerState.cameraUp.z
-      )
+      ),
+      initialPlayerState.colour
     );
 
     main();

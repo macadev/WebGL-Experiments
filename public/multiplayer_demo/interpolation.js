@@ -104,6 +104,7 @@ function interpolatePlayerEntities(
       position: interpolatedPos,
       cameraFront: interpolatedCameraFront,
       cameraUp: cameraUp,
+      colour: toFramePlayerData.colour,
     };
   }
 
@@ -113,7 +114,10 @@ function interpolatePlayerEntities(
 function createPlayerDataForRendering(players) {
   let playerDataForRendering = {};
   for (const [socketId, playerData] of Object.entries(players)) {
-    playerDataForRendering[socketId] = utils.convertToVectors(playerData);
+    playerDataForRendering[socketId] = {
+      ...utils.convertToVectors(playerData),
+      colour: playerData.colour,
+    };
   }
 
   return playerDataForRendering;

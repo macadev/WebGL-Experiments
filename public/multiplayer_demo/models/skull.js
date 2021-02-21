@@ -94,6 +94,11 @@ function initSkullModel(gl) {
       modelMat
     );
 
+    gl.uniform3fv(
+      gl.getUniformLocation(shaderProgram, 'playerColour'),
+      playerData.colour
+    );
+
     skullMeshes.forEach((sceneObject) => sceneObject.render());
   }
 
