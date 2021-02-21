@@ -1,34 +1,16 @@
 import { SECONDS_PER_UPDATE } from './clientConstants.js';
 
 function reconcilePredictionWithServerState(
-  socketId,
   player,
-  latestGameStateFromServer,
+  localPlayerStateFromServer,
   userCommandHistory
 ) {
-  let authoritativeStateForLocalPlayer =
-    latestGameStateFromServer.players[socketId];
-
   let lastAckedUserCommandSeqNumber =
-    authoritativeStateForLocalPlayer.lastAckedSequenceNumber;
+    localPlayerStateFromServer.lastAckedSequenceNumber;
 
-  player.setCameraFront(
-    authoritativeStateForLocalPlayer.cameraFront.x,
-    authoritativeStateForLocalPlayer.cameraFront.y,
-    authoritativeStateForLocalPlayer.cameraFront.z
-  );
-
-  player.setCameraUp(
-    authoritativeStateForLocalPlayer.cameraUp.x,
-    authoritativeStateForLocalPlayer.cameraUp.y,
-    authoritativeStateForLocalPlayer.cameraUp.z
-  );
-
-  player.setPosition(
-    authoritativeStateForLocalPlayer.position.x,
-    authoritativeStateForLocalPlayer.position.y,
-    authoritativeStateForLocalPlayer.position.z
-  );
+  player.setCameraFront(localPlayerStateFromServer.cameraFront);
+  player.setCameraUp(localPlayerStateFromServer.cameraUp);
+  player.setPosition(localPlayerStateFromServer.position);
 
   let discardIndex = -1;
   for (let i = 0; i < userCommandHistory.length; i++) {

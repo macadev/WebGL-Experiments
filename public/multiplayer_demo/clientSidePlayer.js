@@ -39,30 +39,21 @@ class ClientSidePlayer {
 
   // Called to reapply old user commands during prediction and reconciliation.
   applyUserCommand(deltaTime, userCommand) {
-    this.setCameraFront(
-      userCommand.cameraFront.x,
-      userCommand.cameraFront.y,
-      userCommand.cameraFront.z
-    );
-
-    this.setCameraUp(
-      userCommand.cameraUp.x,
-      userCommand.cameraUp.y,
-      userCommand.cameraUp.z
-    );
+    this.setCameraFront(userCommand.cameraFront);
+    this.setCameraUp(userCommand.cameraUp);
 
     this.#moveCamera(deltaTime, new Set(userCommand.movementDirections));
   }
 
-  setCameraUp(x, y, z) {
+  setCameraUp({ x, y, z }) {
     this.#cameraUp = vec3.fromValues(x, y, z);
   }
 
-  setCameraFront(x, y, z) {
+  setCameraFront({ x, y, z }) {
     this.#cameraFront = vec3.fromValues(x, y, z);
   }
 
-  setPosition(x, y, z) {
+  setPosition({ x, y, z }) {
     this.#position = vec3.fromValues(x, y, z);
   }
 
@@ -120,7 +111,7 @@ class ClientSidePlayer {
   }
 
   #moveCamera(deltaTime, movementDirections) {
-    let cameraSpeed = 2.5 * deltaTime;
+    let cameraSpeed = 5.0 * deltaTime;
     if (movementDirections.has(DIRECTIONS.UP)) {
       vec3.scaleAndAdd(
         this.#position,

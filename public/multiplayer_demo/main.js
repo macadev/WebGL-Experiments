@@ -19,6 +19,12 @@ let simulateLag = false;
 const LAG_MS_INPUT_ID = 'simulatedLagAmount';
 let simulatedLagAmount = 0;
 
+const CLIENT_SIDE_PREDICTION_CHECKBOX_ID = 'toggleClientSidePrediction';
+let clientSidePredictionEnabled = true;
+
+const ENTITY_INTERPOLATION_CHECKBOX_ID = 'toggleEntityInterpolation';
+let entityInterpolationEnabled = true;
+
 const fpsMeter = new FPSMeter({
   decimals: 0,
   graph: true,
@@ -62,6 +68,18 @@ function main() {
 
   document.getElementById(LAG_MS_INPUT_ID).onchange = function () {
     simulatedLagAmount = parseInt(this.value);
+  };
+
+  document.getElementById(
+    CLIENT_SIDE_PREDICTION_CHECKBOX_ID
+  ).onchange = function () {
+    clientSidePredictionEnabled = this.checked;
+  };
+
+  document.getElementById(
+    ENTITY_INTERPOLATION_CHECKBOX_ID
+  ).onchange = function () {
+    entityInterpolationEnabled = this.checked;
   };
 
   const canvas = document.querySelector('#glCanvas');
@@ -161,18 +179,36 @@ function main() {
     }
 
     let latestGameStateFrame = gameStateFrames[gameStateFrames.length - 1];
+    let localPlayerStateFromServer = latestGameStateFrame.players[socket.id];
     if (didSimulate) {
-      reconcilePredictionWithServerState(
-        socket.id,
-        player,
-        latestGameStateFrame,
-        userCommandHistory
-      );
+      if (clientSidePredictionEnabled) {
+        reconcilePredictionWithServerState(
+          player,
+          localPlayerStateFromServer,
+          userCommandHistory
+        );
+      } else {
+        // If client-side prediction is not enabled then we simply set the player's
+        // position and orientation to what the server tells us in the latest game state update.
+        player.setPosition(localPlayerStateFromServer.position);
+        player.setCameraFront(localPlayerStateFromServer.cameraFront);
+        player.setCameraUp(localPlayerStateFromServer.cameraUp);
+      }
+    }
+
+    let framesForInterpolation;
+    if (entityInterpolationEnabled) {
+      framesForInterpolation = gameStateFrames;
+    } else {
+      // A small hack where we only pass the latest frame to the interpolation algorithm.
+      // With a single frame it's not possible to interpolate (you need 'from' and 'to' states).
+      // We'll simply see the entities as they came in the latest update.
+      framesForInterpolation = [gameStateFrames[gameStateFrames.length - 1]];
     }
 
     let playerDataForRendering = interpolatePlayerEntities(
       socket.id,
-      gameStateFrames,
+      framesForInterpolation,
       nowMs - 100 // Other players are simulated 100 ms in the past. We interpolate between their updates.
     );
 
@@ -184,7 +220,6 @@ function main() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     let cameraComponents = player.getComponentVectors();
-
     if (playerPoV === THIRD_PERSON_VIEW) {
       let right = vec3.cross(
         vec3.create(),

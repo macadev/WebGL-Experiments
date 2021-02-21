@@ -1,3 +1,5 @@
+import utils from './utils.js';
+
 function interpolatePlayerEntities(
   playerSocketId,
   gameStateFrames,
@@ -111,23 +113,7 @@ function interpolatePlayerEntities(
 function createPlayerDataForRendering(players) {
   let playerDataForRendering = {};
   for (const [socketId, playerData] of Object.entries(players)) {
-    playerDataForRendering[socketId] = {
-      position: vec3.fromValues(
-        playerData.position.x,
-        playerData.position.y,
-        playerData.position.z
-      ),
-      cameraFront: vec3.fromValues(
-        playerData.cameraFront.x,
-        playerData.cameraFront.y,
-        playerData.cameraFront.z
-      ),
-      cameraUp: vec3.fromValues(
-        playerData.cameraUp.x,
-        playerData.cameraUp.y,
-        playerData.cameraUp.z
-      ),
-    };
+    playerDataForRendering[socketId] = utils.convertToVectors(playerData);
   }
 
   return playerDataForRendering;

@@ -12,19 +12,11 @@ class Player {
 
   move(userCommand, deltaTime) {
     // Apply the camera vectors contained in the input before moving through space
-    this.setCameraFront(
-      userCommand.cameraFront.x,
-      userCommand.cameraFront.y,
-      userCommand.cameraFront.z
-    );
-    this.setCameraUp(
-      userCommand.cameraUp.x,
-      userCommand.cameraUp.y,
-      userCommand.cameraUp.z
-    );
+    this.setCameraFront(userCommand.cameraFront);
+    this.setCameraUp(userCommand.cameraUp);
 
     let movementDirectionsSet = new Set(userCommand.movementDirections);
-    let cameraSpeed = 2.5 * deltaTime;
+    let cameraSpeed = 5.0 * deltaTime;
 
     if (movementDirectionsSet.has('U')) {
       vec3.scaleAndAdd(
@@ -99,11 +91,11 @@ class Player {
     return this.#lastAckedSequenceNumber;
   }
 
-  setCameraFront(x, y, z) {
+  setCameraFront({ x, y, z }) {
     this.#cameraFront = vec3.fromValues(x, y, z);
   }
 
-  setCameraUp(x, y, z) {
+  setCameraUp({ x, y, z }) {
     this.#cameraUp = vec3.fromValues(x, y, z);
   }
 }
