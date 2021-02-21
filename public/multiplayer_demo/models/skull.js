@@ -12,7 +12,10 @@ function initSkullModel(gl) {
     skullShaders.fragmentShaderCode
   );
 
-  let modelLoader = new ModelLoader('skull/scene.gltf', 'skull');
+  let modelLoader = new ModelLoader(
+    'multiplayer_demo/skull/scene.gltf',
+    'multiplayer_demo/skull'
+  );
   modelLoader.getSceneMeshData().then((dataOfMeshes) => {
     dataOfMeshes.forEach((meshData) => {
       skullMeshes.push(

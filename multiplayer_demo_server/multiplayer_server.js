@@ -10,6 +10,10 @@ const io = require('socket.io')(server);
 
 app.use(express.static(path.join(__dirname, '/../public')));
 
+app.get('/game', (req, res) => {
+  res.sendFile(path.join(__dirname, '/../public/multiplayer_demo/demo.html'));
+});
+
 // Server running game simulation 60 times per seconds
 // 1000 / 60 = 16.666 ms
 const SERVER_GAME_SIMULATION_TICK_RATE_MS = 1000 / 60;
