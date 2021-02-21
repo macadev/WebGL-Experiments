@@ -1,7 +1,6 @@
 const vertexShaderCode = `#version 300 es
 in vec3 aPosition;
 in vec3 aNormal;
-in vec2 aTexCoord;
 
 uniform mat4 model;
 uniform mat4 view;
@@ -9,14 +8,20 @@ uniform mat4 projection;
 
 out vec3 worldPosition;
 out vec3 worldNormal;
-out vec2 texCoord;
+out vec3 vLighting;
 
 void main()
 {
     worldPosition = vec3(model * vec4(aPosition, 1.0));
     worldNormal = normalize(vec3(model * vec4(aNormal, 0.0)));
-    texCoord = aTexCoord;
     gl_Position = projection * view * model * vec4(aPosition, 1.0);
+
+    vec3 ambientLight = vec3(0.1, 0.1, 0.1);
+    vec3 directionalLightColor = vec3(1, 1, 1);
+    vec3 directionalVector = normalize(vec3(3, 10, 3));
+
+    float directional = max(dot(aNormal.xyz, directionalVector), 0.0);
+    vLighting = ambientLight + (directionalLightColor * directional);
 }`;
 
 const fragmentShaderCode = `#version 300 es
@@ -24,34 +29,14 @@ precision highp float;
 
 in vec3 worldPosition;
 in vec3 worldNormal;
-in vec2 texCoord;
-
-uniform sampler2D texture1;
-uniform int shouldSampleTexture;
+in vec3 vLighting;
 
 out vec4 outputColor;
 
 void main()
 {
-    vec3 lightPos = vec3(0.0, 10.0, 5.0);
-    vec3 lightColor = vec3(0.0, 0.73, 0.0);
-    vec3 lightDir = normalize(lightPos - worldPosition);
-
-    // highp vec3 diff = vec3(1.0, 0.0, 0.0);
-    
-    // highp vec3 diff = (max(dot(lightDir, worldNormal), 0.0) * lightColor) * texture2D(texture1, texCoord).rgb;
-    // highp vec3 diff = (max(dot(lightDir, worldNormal), 0.0)) * texture2D(texture1, texCoord).rgb;
-    // highp vec3 diff = ((max(dot(lightDir, worldNormal), 0.0)) * texture2D(texture1, texCoord).rgb) + lightColor ;
-
-    // vec3 diff;
-    // if (shouldSampleTexture == 1) {
-    //     diff = (max(dot(lightDir, worldNormal), 0.0)) * texture(texture1, texCoord).rgb;
-    // } else {
-    //    diff = (max(dot(lightDir, worldNormal), 0.0) * lightColor);
-    // }
-
-    outputColor = vec4(texture(texture1, texCoord).rgb + vec3(0.3, 0.0, 0.0), 1.0);
-    // outputColor = vec4(diff, 1.0);
+    vec4 texelColor = vec4(0.0, 0.7, 0.0, 1.0);
+    outputColor = vec4(texelColor.rgb * vLighting, texelColor.a);
 }`;
 
 export default { vertexShaderCode, fragmentShaderCode };

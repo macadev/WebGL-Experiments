@@ -6,6 +6,7 @@ import reconcilePredictionWithServerState from './prediction.js';
 import interpolatePlayerEntities from './interpolation.js';
 
 import initSkullModel from './models/skull.js';
+import initFloorModel from './models/floor.js';
 
 const POV_DROP_DOWN_ID = 'povDropDown';
 const FIRST_PERSON_VIEW = 'fpv';
@@ -113,6 +114,7 @@ function main() {
   );
 
   let skullModel = initSkullModel(gl);
+  let floorModel = initFloorModel(gl);
 
   let previousMs = 0;
   let lagMs = 0;
@@ -257,6 +259,10 @@ function main() {
     if (playerPoV === THIRD_PERSON_VIEW) {
       skullModel.render(player.getComponentVectors());
     }
+
+    floorModel.setProjectionMatrix(projectionMatrix);
+    floorModel.setViewMatrix(viewMatrix);
+    floorModel.render();
 
     requestAnimationFrame(gameLoop);
     fpsMeter.tick();
