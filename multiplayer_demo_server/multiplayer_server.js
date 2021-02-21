@@ -10,6 +10,10 @@ const io = require('socket.io')(server);
 
 app.use(express.static(path.join(__dirname, '/../public')));
 
+app.get('/hello', (req, res) => {
+  res.sendStatus(200);
+});
+
 app.get('/game', (req, res) => {
   res.sendFile(path.join(__dirname, '/../public/multiplayer_demo/demo.html'));
 });
