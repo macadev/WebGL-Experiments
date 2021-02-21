@@ -10,6 +10,11 @@ const io = require('socket.io')(server);
 
 app.use(express.static(path.join(__dirname, '/../public')));
 
+app.use((req, res, next) => {
+  console.log('Entry middleware', { path: req.path });
+  next();
+});
+
 app.get('/hello', (req, res) => {
   res.sendStatus(200);
 });
