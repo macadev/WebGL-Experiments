@@ -7,7 +7,9 @@ function interpolatePlayerEntities(
 ) {
   if (gameStateFrames.length === 1) {
     // Just have one update. Nothing to interpolate with.
-    return createPlayerDataForRendering(gameStateFrames[0].players);
+    return createPlayerDataForRendering(
+      gameStateFrames[gameStateFrames.length - 1].players
+    );
   }
 
   let toFrame, fromFrame;
@@ -31,7 +33,9 @@ function interpolatePlayerEntities(
 
   if (!foundUpdatesToInterpBetween) {
     // Didn't find updates to interp between. Return the latest game state.
-    return createPlayerDataForRendering(gameStateFrames[0].players);
+    return createPlayerDataForRendering(
+      gameStateFrames[gameStateFrames.length - 1].players
+    );
   }
 
   let interpolatedPlayerData = {};
@@ -39,15 +43,6 @@ function interpolatePlayerEntities(
   let interpolationFactor =
     (interpTimestamp - fromFrame.serverTime) /
     (toFrame.serverTime - fromFrame.serverTime);
-
-  if (interpolationFactor > 1 || interpolationFactor < 0) {
-    console.log('weird interp factor calculated', {
-      interpolationFactor,
-      interpTimestamp,
-      fromFrameServerTime: fromFrame.serverTime,
-      toFrameServerTime: toFrame.serverTime,
-    });
-  }
 
   for (const [socketId, playerData] of Object.entries(fromFrame.players)) {
     if (socketId === playerSocketId) {
