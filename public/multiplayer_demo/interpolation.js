@@ -32,6 +32,7 @@ function interpolatePlayerEntities(
   }
 
   if (!foundUpdatesToInterpBetween) {
+    console.log('Could not find states to interpolate between');
     // Didn't find updates to interp between. Return the latest game state.
     return createPlayerDataForRendering(
       gameStateFrames[gameStateFrames.length - 1].players
