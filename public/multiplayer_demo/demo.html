@@ -20,17 +20,13 @@
     </head>
     <body>
       <div style="display: flex; flex-direction: row">
-        <div>
-          <div>
-            ping (ms):
-            <a id="ping"></a>
-          </div>
+        <div style="padding: 0px 10px">
           <select name="POV" id="povDropDown">
             <option value="fpv" selected>First Person View</option>
             <option value="tpv">Third Person View</option>
           </select>
         </div>
-        <div>
+        <div style="padding: 0px 10px">
           <div>
             <input type="checkbox" id="simulateLag" name="simulateLag" />
             <label for="simulateLag"> Simulate Lag</label>
@@ -44,7 +40,7 @@
             />
           </div>
         </div>
-        <div>
+        <div style="padding: 0px 10px">
           <div>
             <input
               type="checkbox"
@@ -64,6 +60,16 @@
               checked
             />
             <label for="toggleEntityInterpolation">Entity Interpolation</label>
+          </div>
+        </div>
+        <div style="padding: 0px 10px">
+          <div>
+            ping (ms):
+            <a id="ping"></a>
+          </div>
+          <div>
+            updates/second from server:
+            <a id="serverUpdatesPerSec"></a>
           </div>
         </div>
       </div>
