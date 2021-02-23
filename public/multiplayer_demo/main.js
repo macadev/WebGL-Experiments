@@ -192,7 +192,7 @@ function main() {
     let playerDataForRendering = interpolatePlayerEntities(
       socket.id,
       framesForInterpolation,
-      nowMs - 100 // Other players are simulated 100 ms in the past. We interpolate between their updates.
+      nowMs - 200 // Other players are simulated 100 ms in the past. We interpolate between their updates.
     );
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque
