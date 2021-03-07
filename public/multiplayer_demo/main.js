@@ -1,6 +1,10 @@
-import DIRECTIONS from '../engine/direction.js';
+import INPUTS from './movement/input.js';
 import { MS_PER_UPDATE, SECONDS_PER_UPDATE } from './clientConstants.js';
 
+import {
+  movePlayer,
+  calculateVelocityBasedOnKeysPressed,
+} from './movement/movement.js';
 import ClientSidePlayer from './clientSidePlayer.js';
 import reconcilePredictionWithServerState from './prediction.js';
 import interpolatePlayerEntities from './interpolation.js';
@@ -38,9 +42,11 @@ const fpsMeter = new FPSMeter({
 let mouseX = 400;
 let mouseY = 300;
 
-let movementDirections = new Set();
+let oldKeyBoardState = new Set();
+let keyBoardState = new Set();
 
 let player;
+let inputSequenceNumber = 0;
 
 let socket;
 
@@ -139,12 +145,30 @@ function main() {
     let didSimulate = false;
     let userCommand;
     while (lagMs >= MS_PER_UPDATE) {
-      userCommand = player.processInputs(
-        SECONDS_PER_UPDATE, // TODO: need to stop using seconds here
-        movementDirections,
-        mouseX,
-        mouseY
+      let velocityBasedOnKeys = calculateVelocityBasedOnKeysPressed(
+        oldKeyBoardState,
+        keyBoardState
       );
+
+      player.rotateCamera(mouseX, mouseY);
+      movePlayer(player, velocityBasedOnKeys);
+
+      let playerComponentVectors = player.getComponentVectors();
+      userCommand = {
+        cameraFront: {
+          x: playerComponentVectors.cameraFront[0],
+          y: playerComponentVectors.cameraFront[1],
+          z: playerComponentVectors.cameraFront[2],
+        },
+        cameraUp: {
+          x: playerComponentVectors.cameraUp[0],
+          y: playerComponentVectors.cameraUp[1],
+          z: playerComponentVectors.cameraUp[2],
+        },
+        inputSequenceNumber,
+        velocityBasedOnKeys,
+      };
+      inputSequenceNumber++;
 
       userCommandHistory.push(userCommand);
 
@@ -176,6 +200,7 @@ function main() {
         player.setPosition(localPlayerStateFromServer.position);
         player.setCameraFront(localPlayerStateFromServer.cameraFront);
         player.setCameraUp(localPlayerStateFromServer.cameraUp);
+        player.setVelocity(localPlayerStateFromServer.velocity);
       }
     }
 
@@ -297,31 +322,31 @@ function updatePosition(e) {
 function initializeMovementKeyListeners() {
   document.addEventListener('keydown', function (e) {
     if (e.code === 'KeyW') {
-      movementDirections.add(DIRECTIONS.UP);
+      keyBoardState.add(INPUTS.W);
     }
     if (e.code === 'KeyS') {
-      movementDirections.add(DIRECTIONS.DOWN);
+      keyBoardState.add(INPUTS.S);
     }
     if (e.code === 'KeyA') {
-      movementDirections.add(DIRECTIONS.LEFT);
+      keyBoardState.add(INPUTS.A);
     }
     if (e.code === 'KeyD') {
-      movementDirections.add(DIRECTIONS.RIGHT);
+      keyBoardState.add(INPUTS.D);
     }
   });
 
   document.addEventListener('keyup', function (e) {
     if (e.code === 'KeyW') {
-      movementDirections.delete(DIRECTIONS.UP);
+      keyBoardState.delete(INPUTS.W);
     }
     if (e.code === 'KeyS') {
-      movementDirections.delete(DIRECTIONS.DOWN);
+      keyBoardState.delete(INPUTS.S);
     }
     if (e.code === 'KeyA') {
-      movementDirections.delete(DIRECTIONS.LEFT);
+      keyBoardState.delete(INPUTS.A);
     }
     if (e.code === 'KeyD') {
-      movementDirections.delete(DIRECTIONS.RIGHT);
+      keyBoardState.delete(INPUTS.D);
     }
   });
 }

@@ -1,4 +1,4 @@
-import { SECONDS_PER_UPDATE } from './clientConstants.js';
+import { movePlayer } from './movement/movement.js';
 
 function reconcilePredictionWithServerState(
   player,
@@ -8,9 +8,12 @@ function reconcilePredictionWithServerState(
   let lastAckedUserCommandSeqNumber =
     localPlayerStateFromServer.lastAckedSequenceNumber;
 
+  let posBeforeReconciliation = player.getComponentVectors().position;
+
   player.setCameraFront(localPlayerStateFromServer.cameraFront);
   player.setCameraUp(localPlayerStateFromServer.cameraUp);
   player.setPosition(localPlayerStateFromServer.position);
+  player.setVelocity(localPlayerStateFromServer.velocity);
 
   let discardIndex = -1;
   for (let i = 0; i < userCommandHistory.length; i++) {
@@ -20,7 +23,26 @@ function reconcilePredictionWithServerState(
       continue;
     }
 
-    player.applyUserCommand(SECONDS_PER_UPDATE, command);
+    // Apply the user command
+    player.setCameraFront(command.cameraFront);
+    player.setCameraUp(command.cameraUp);
+    movePlayer(player, command.velocityBasedOnKeys);
+  }
+
+  let posAfterReconciliation = player.getComponentVectors().position;
+
+  if (
+    posAfterReconciliation[0] - posBeforeReconciliation[0] > 0 ||
+    posAfterReconciliation[1] - posBeforeReconciliation[1] > 0 ||
+    posAfterReconciliation[2] - posBeforeReconciliation[2] > 0
+  ) {
+    console.log({
+      diffs: [
+        posAfterReconciliation[0] - posBeforeReconciliation[0],
+        posAfterReconciliation[1] - posBeforeReconciliation[1],
+        posAfterReconciliation[2] - posBeforeReconciliation[2],
+      ],
+    });
   }
 
   if (discardIndex > -1) {

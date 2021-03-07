@@ -7,6 +7,8 @@ class ClientSidePlayer {
   #cameraFront = vec3.fromValues(0.0, 0.0, -1.0);
   #cameraUp = vec3.fromValues(0.0, 1.0, 0.0);
 
+  #velocity = vec3.fromValues(0.0, 0.0, 0.0);
+
   #mouseX = 400;
   #mouseY = 300;
 
@@ -14,8 +16,6 @@ class ClientSidePlayer {
   #yaw = -90.0;
 
   #colour;
-
-  #inputSequenceNumber = 0;
 
   constructor(position, cameraFront, cameraUp, colour) {
     this.#position = position;
@@ -29,19 +29,12 @@ class ClientSidePlayer {
       position: vec3.clone(this.#position),
       cameraFront: vec3.clone(this.#cameraFront),
       cameraUp: vec3.clone(this.#cameraUp),
+      velocity: vec3.clone(this.#velocity),
     };
   }
 
   getColour() {
     return this.#colour;
-  }
-
-  processInputs(deltaTime, movementDirections, mouseX, mouseY) {
-    this.#rotateCamera(mouseX, mouseY);
-    this.#moveCamera(deltaTime, movementDirections);
-    this.#inputSequenceNumber++;
-
-    return this.#createUserCommand(movementDirections);
   }
 
   // Called to reapply old user commands during prediction and reconciliation.
@@ -64,26 +57,27 @@ class ClientSidePlayer {
     this.#position = vec3.fromValues(x, y, z);
   }
 
-  // Returns the JS object we'll send to server indicating the keyboard inputs, camera vectors
-  // and the input sequence number.
-  #createUserCommand(movementDirections) {
-    return {
-      cameraFront: {
-        x: this.#cameraFront[0],
-        y: this.#cameraFront[1],
-        z: this.#cameraFront[2],
-      },
-      cameraUp: {
-        x: this.#cameraUp[0],
-        y: this.#cameraUp[1],
-        z: this.#cameraUp[2],
-      },
-      movementDirections: Array.from(movementDirections),
-      inputSequenceNumber: this.#inputSequenceNumber,
-    };
+  setVelocity({ x, y, z }) {
+    this.#velocity = vec3.fromValues(x, y, z);
   }
 
-  #rotateCamera(newMouseX, newMouseY) {
+  setCameraUpV(vector) {
+    this.#cameraUp = vector;
+  }
+
+  setCameraFrontV(vector) {
+    this.#cameraFront = vector;
+  }
+
+  setPositionV(vector) {
+    this.#position = vector;
+  }
+
+  setVelocityV(vector) {
+    this.#velocity = vector;
+  }
+
+  rotateCamera(newMouseX, newMouseY) {
     let offsetX = newMouseX - this.#mouseX;
     let offsetY = this.#mouseY - newMouseY;
     this.#mouseX = newMouseX;

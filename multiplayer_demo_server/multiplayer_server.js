@@ -3,6 +3,7 @@ const path = require('path');
 const randomColor = require('randomcolor');
 
 const Player = require('./player');
+const { movePlayer } = require('./server_movement');
 
 const app = express();
 const server = require('http').createServer(app);
@@ -36,7 +37,7 @@ function createWorldStatePayload(players) {
     let player = players[socketId];
 
     worldState.players[socketId] = {
-      ...player.getCameraComponents(),
+      ...player.getComponentVectorsForTransmission(),
       lastAckedSequenceNumber: player.getLastAckedSequenceNumber(),
       colour: player.getColour(),
     };
@@ -80,7 +81,12 @@ function simulateGame() {
       // Player droppped and had commands queued in. Ignore them.
       continue;
     }
-    player.move(userCommand, SERVER_GAME_SIMULATION_TICK_RATE_SECONDS);
+
+    player.setCameraFront(userCommand.cameraFront);
+    player.setCameraUp(userCommand.cameraUp);
+    movePlayer(player, userCommand.velocityBasedOnKeys);
+
+    player.setLastAckedSequenceNumber(userCommand.inputSequenceNumber);
   }
   // Flush the queue
   userCommands = [];
